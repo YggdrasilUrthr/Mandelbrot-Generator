@@ -31,5 +31,8 @@
 *.out
 *.app
 
+#VsCode folder
+.vscode/
+
 # Local libraries
 gmp-6.2.1/
