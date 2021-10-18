@@ -30,3 +30,6 @@
 *.exe
 *.out
 *.app
+
+# Local libraries
+gmp-6.2.1/
