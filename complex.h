@@ -1,5 +1,7 @@
 #pragma once
 
+#include <gmpxx.h>
+
 /* This is a very minimalistic implementation (it does not support any argument variable and it can only be used for floating point
 ** real and imaginary part) of complex numbers using some basic GMP functions. 
 ** A better alternative may include a specific library for arbitrary precision complex numbers (something like GMC). 
@@ -7,7 +9,7 @@
 */
 
 typedef complex<mpf_class> complex_arb;
-typedef complex<float> complex_fix;
+typedef complex<double> complex_fix;
 
 template<typename T> class complex {
 

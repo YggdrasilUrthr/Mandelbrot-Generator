@@ -2,5 +2,5 @@
 
 #pragma once
 
-template<typename T> bool check_point(complex<T>, unsigned int);
+template<typename T> bool check_point(const complex<T> &, unsigned int);
 bool border_trace();

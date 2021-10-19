@@ -1,5 +1,4 @@
 #include <iostream>
-#include <gmpxx.h>
 #include "complex.h"
 
 int main(int argc, char ** argv){
