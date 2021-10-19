@@ -1,4 +1,6 @@
+#include "complex.h"
+
 #pragma once
 
-bool check_point();
+template<typename T> bool check_point(complex<T>, unsigned int);
 bool border_trace();

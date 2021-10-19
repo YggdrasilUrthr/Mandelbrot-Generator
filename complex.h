@@ -6,7 +6,8 @@
 ** Anyway, considering what we need for such a simple mathematical application, using such complete library might result somehow overkill. 
 */
 
-//arbitrary preciosion: T = mpf_class
+typedef complex<mpf_class> complex_arb;
+typedef complex<float> complex_fix;
 
 template<typename T> class complex {
 
@@ -52,3 +53,4 @@ private:
     T im = 0;
 
 };
+

@@ -29,6 +29,8 @@ class mandelbrot_set {
         unsigned int m_height;
         bool m_colors;
 
-        void bruteforce_compute();
+        template<typename T> void bruteforce_compute();
+        template<typename T> T map(T, T, T, T, T);
+        
 
 };

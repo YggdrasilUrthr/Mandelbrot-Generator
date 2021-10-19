@@ -31,6 +31,9 @@
 *.out
 *.app
 
+#Old program
+Old/
+
 #VsCode folder
 .vscode/
 
