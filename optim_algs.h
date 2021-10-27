@@ -2,7 +2,7 @@
 
 #pragma once
 
-template<typename T> bool check_point(const complex<T> &point, uint32_t max_iter) {
+template<typename T> uint32_t check_point(const complex<T> &point, uint32_t max_iter) {
 
     complex<T> z(0.0, 0.0);
 
@@ -10,7 +10,7 @@ template<typename T> bool check_point(const complex<T> &point, uint32_t max_iter
     
         if(z.get_mod() > 2) {
 
-            return false;
+            return i;
 
         }
 
@@ -18,7 +18,7 @@ template<typename T> bool check_point(const complex<T> &point, uint32_t max_iter
     
     }
 
-    return true;
+    return 0;
 
 };
 

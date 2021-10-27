@@ -1,8 +1,23 @@
 #include <iostream>
+#include <string>
 
 #include "mandelbrot.h"
 
 int main(int argc, char ** argv){
+
+    uint32_t params[3] = {DEFAULT_WIDTH, DEFAULT_HEIGHT, DEFAULT_ITER};
+
+    if (argc > 1 && argc <= 4) {
+        
+        for(size_t i = 1; i < argc; ++i) {
+
+            params[i - 1] = std::stoi(std::string(argv[i]));
+
+        }
+
+    }
+    
+    
 
     glewExperimental = true;
 
@@ -39,7 +54,7 @@ int main(int argc, char ** argv){
 
     glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);
 
-    mandelbrot_set<double> mandelbrot(120, 120, 1000);
+    mandelbrot_set<double> mandelbrot(params[0], params[1], params[2], mandelbrot_set<double>::color_mode::COLORS);
     mandelbrot.draw(window);
 
     return 0;
