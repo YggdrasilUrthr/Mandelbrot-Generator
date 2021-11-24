@@ -20,8 +20,8 @@ public:
 
     };
 
-    T get_re() { return m_re; };
-    T get_im() { return m_im; };
+    const T get_re() { return m_re; };
+    const T get_im() { return m_im; };
     
     T get_mod() { 
         
@@ -55,6 +55,12 @@ public:
 
     };
 
+    complex<T> operator-(const complex<T> &complex_2) {
+        
+        return complex<T>(m_re - complex_2.m_re, m_im - complex_2.m_im);
+
+    };
+
     complex<T> operator*(const complex<T> &complex_2) {
 
         T out_re = m_re * complex_2.m_re - m_im * complex_2.m_im;
@@ -64,12 +70,44 @@ public:
 
     };
 
+    complex<T> operator*(const T scalar) {
+
+        return complex<T>(m_re * scalar, m_im * scalar);
+
+    }
+
+    bool operator==(const complex<T> &complex_2) {
+        
+        return (epsilon_compare(m_re, complex_2.m_re)) && (epsilon_compare(m_im, complex_2.m_im));
+
+    };
+
+    bool operator!=(const complex<T> &complex_2) {
+
+        return !(operator==(complex_2));
+
+    }
+
 private:
 
     void update_mods() {
 
         m_mod_sqrd = m_re * m_re + m_im * m_im;
 	    m_mod = sqrt(m_mod_sqrd);
+
+    };
+
+    bool epsilon_compare(T in_1, T in_2) {
+
+        double epsilon = std::numeric_limits<double>::epsilon();
+
+        if(abs(in_1 - in_2) < 0.0000001) {
+
+            return true;
+
+        }
+
+        return false;
 
     };
 

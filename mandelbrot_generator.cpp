@@ -54,8 +54,9 @@ int main(int argc, char ** argv){
 
     glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);
 
-    mandelbrot_set<double> mandelbrot(params[0], params[1], params[2], mandelbrot_set<double>::color_mode::COLORS);
-    mandelbrot.draw(window);
+    mandelbrot_set<double> mandelbrot(params[0], params[1], params[2], mandelbrot_set<double>::color_mode::BOOLEAN);
+    //mandelbrot.draw(window);
+    mandelbrot.draw_list(window);
 
     return 0;
 
