@@ -60,7 +60,7 @@ template<typename T> class mandelbrot_set {
         std::unique_ptr<uint32_t[]> m_points;
 
         void bruteforce_compute();
-        //void border_trace();
+        std::array<size_t, 6> find_first(size_t, size_t);
 
 };
 
@@ -75,13 +75,18 @@ template<typename T> void mandelbrot_set<T>::bruteforce_compute(){
             point.set_im(map<T>(static_cast<T>(m_height), 0.0, 2.0, -2.0, static_cast<T>(i))); 
 
             uint32_t position = j + i * m_width;
+            
             m_points[position] = check_point<T>(point, m_iter);
 
             if (m_points[position] > m_max_iter_encountered) {
                 
                 m_max_iter_encountered = m_points[position];
 
+            } else if (m_points[position] == 0)
+            {
+                m_points[position] = 0;
             }
+            
 
         }
 
@@ -89,18 +94,78 @@ template<typename T> void mandelbrot_set<T>::bruteforce_compute(){
         
 }
 
-/*template<typename T> void mandelbrot_set<T>::border_trace() {
+template<typename T> std::array<size_t, 6> mandelbrot_set<T>::find_first(size_t start_i, size_t start_j) {
 
+    std::array<size_t, 6> out_indexes;
 
+    bool set_flag = false;
 
-}*/
+    for (size_t i = start_i; i < m_height; ++i) {
+        
+        if (!set_flag) {
+            
+            for (size_t j = start_j; j < m_width; ++j) {
 
-//Only a tesing method, has to be removed once I get the algorithm working.
+                complex<T> point;
+                point.set_re(map<T>(static_cast<T>(m_width), 0.0, 2.0, -2.0, static_cast<T>(j)));
+                point.set_im(map<T>(static_cast<T>(m_height), 0.0, 2.0, -2.0, static_cast<T>(i))); 
+
+                if(check_point(point, m_iter) >= 13) {
+
+                    out_indexes[0] = j;
+                    out_indexes[1] = i;
+
+                    if(j != 0) {
+                        
+                        out_indexes[2] = j - 1;
+                        out_indexes[3] = i;
+
+                    } else {
+
+                        out_indexes[2] = m_width - 1;
+                        out_indexes[3] = i;
+
+                    }
+                    
+                    if(j != m_width - 1) {
+
+                        out_indexes[4] = j + 1;
+                        out_indexes[5] = i;
+
+                    } else {
+
+                        out_indexes[4] = 0;
+                        out_indexes[5] = i + 1;
+
+                    }
+
+                    set_flag = !set_flag;
+                    break;
+
+                }
+
+            }
+
+        }
+
+    }
+
+    if(set_flag) {
+        
+        return out_indexes;
+
+    } else {
+
+        return {m_width, m_height, 0, 0, 0, 0}; 
+
+    }
+
+}
 
 template<typename T> void mandelbrot_set<T>::draw_list(GLFWwindow * window) {
 
-    T re_delta = map<T>(static_cast<T>(m_width), 0.0, 4.0, 0.0, 1.0);
-    T im_delta = map<T>(static_cast<T>(m_height), 0.0, 4.0, 0.0, 1.0);
+    T re_delta = static_cast<T>(4.0 * 1.0 / m_width);
+    T im_delta =  static_cast<T>(4.0 * 1.0 / m_height);
 
     std::unique_ptr<uint8_t[]> pixels(new uint8_t[m_width * m_height * 3]);
 
@@ -119,50 +184,39 @@ template<typename T> void mandelbrot_set<T>::draw_list(GLFWwindow * window) {
         }
     }
     
-    complex<T> start_point;
+    std::list<complex<T>> points;
+
+    /*complex<T> start_point;
     complex<T> backtrack;
 
-    bool set_flag = false;
 
-    for (size_t i = 0; i < m_height; ++i) {
-        
-        if (!set_flag) {
-            
-            for (size_t j = 0; j < m_width; ++j) {
+    std::array<size_t, 6> indexes = {0, 0, 0, 0, 0, 0};
+    std::list<complex<T>> points;
 
-                complex<T> point;
-                point.set_re(map<T>(static_cast<T>(m_width), 0.0, 2.0, -2.0, static_cast<T>(j)));
-                point.set_im(map<T>(static_cast<T>(m_height), 0.0, 2.0, -2.0, static_cast<T>(i))); 
+    do {
 
-                if(check_point(point, m_iter) >= 12) {
+        indexes = find_first(indexes[5], indexes[4]);
 
-                    start_point.set_re(point.get_re());
-                    start_point.set_im(point.get_im());
+        if(indexes[0] == m_width) {
 
-                    if(j != 0) {
-                        
-                        backtrack.set_re(map<T>(static_cast<T>(m_width), 0.0, 2.0, -2.0, static_cast<T>(j - 1)));
-                        backtrack.set_im(map<T>(static_cast<T>(m_height), 0.0, 2.0, -2.0, static_cast<T>(i))); 
+            break;
 
-                    } else {
-
-                        backtrack.set_re(map<T>(static_cast<T>(m_width), 0.0, 2.0, -2.0, static_cast<T>(m_width - 1)));
-                        backtrack.set_im(map<T>(static_cast<T>(m_height), 0.0, 2.0, -2.0, static_cast<T>(i - 1))); 
-
-                    }
-                    
-
-                    set_flag = !set_flag;
-                    break;
-
-                }
-
-            }
         }
 
-    }
+        start_point.set_re(map<T>(static_cast<T>(m_width), 0.0, 2.0, -2.0, static_cast<T>(indexes[0])));
+        start_point.set_im(map<T>(static_cast<T>(m_height), 0.0, 2.0, -2.0, static_cast<T>(indexes[1])));
 
-    std::list<complex<T>> points = border_trace<T>(start_point, backtrack, re_delta, im_delta, m_iter);
+        //std::cout << indexes[5] << " " << indexes[4] << std::endl;
+
+        backtrack.set_re(map<T>(static_cast<T>(m_width), 0.0, 2.0, -2.0, static_cast<T>(indexes[2])));
+        backtrack.set_im(map<T>(static_cast<T>(m_height), 0.0, 2.0, -2.0, static_cast<T>(indexes[3]))); 
+
+        points = border_trace<T>(start_point, backtrack, re_delta, im_delta, m_iter);
+
+    } while(points.size() <= 5);*/
+
+    points = border_trace<T>(m_width, m_height, re_delta, im_delta, m_iter);
+    uint32_t counter = 0;
 
     for(typename std::list<complex<T>>::iterator it = points.begin(); it != points.end(); ++it) {
 
@@ -177,6 +231,8 @@ template<typename T> void mandelbrot_set<T>::draw_list(GLFWwindow * window) {
             
         }
 
+        counter++;
+
     }
 
     do {
@@ -188,7 +244,7 @@ template<typename T> void mandelbrot_set<T>::draw_list(GLFWwindow * window) {
         glfwPollEvents();
 
     } while(glfwGetKey(window, GLFW_KEY_ESCAPE) != GLFW_PRESS && glfwWindowShouldClose(window) == 0);
-
+    
     return;
 
 }

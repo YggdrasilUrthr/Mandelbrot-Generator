@@ -23,9 +23,9 @@ public:
     const T get_re() { return m_re; };
     const T get_im() { return m_im; };
     
-    T get_mod() { 
+    const T get_mod() { 
         
-        update_mods();
+        //update_mods();
         return m_mod; 
         
     };
@@ -101,7 +101,7 @@ private:
 
         double epsilon = std::numeric_limits<double>::epsilon();
 
-        if(abs(in_1 - in_2) < 0.0000001) {
+        if(abs(in_1 - in_2) < 0.0001) {
 
             return true;
 
