@@ -5,9 +5,17 @@
 
 int main(int argc, char ** argv){
 
-    uint32_t params[3] = {DEFAULT_WIDTH, DEFAULT_HEIGHT, DEFAULT_ITER};
+    uint32_t params[5] = {
+        
+        DEFAULT_WIDTH, 
+        DEFAULT_HEIGHT, 
+        DEFAULT_ITER, 
+        mandelbrot_set<double>::color_mode::BOOLEAN,
+        mandelbrot_set<double>::optimization_type::NONE
 
-    if (argc > 1 && argc <= 4) {
+    };
+
+    if (argc > 1 && argc <= 6) {
         
         for(size_t i = 1; i < argc; ++i) {
 
@@ -55,8 +63,16 @@ int main(int argc, char ** argv){
     glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);
 
     mandelbrot_set<double> mandelbrot(params[0], params[1], params[2], mandelbrot_set<double>::color_mode::BOOLEAN);
-    //mandelbrot.draw(window);
-    mandelbrot.draw_list(window);
+
+    if(params[4] == 0) {
+        
+        mandelbrot.draw(window);
+
+    } else if(params[4] == 4) {
+
+        mandelbrot.draw_list(window);
+
+    }
 
     return 0;
 

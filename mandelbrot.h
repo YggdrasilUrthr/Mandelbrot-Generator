@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <memory>
+#include <chrono>
 
 #include <GL/glew.h>
 #include <GL/gl.h>
@@ -19,6 +20,7 @@ template<typename T> class mandelbrot_set {
 
         enum optimization_type{
 
+            NONE = 0b0000,
             MULTITHREAD = 0b0001,
             BORDER_TRACE = 0b0010,
             PERTURBATION = 0b0100,
@@ -215,8 +217,10 @@ template<typename T> void mandelbrot_set<T>::draw_list(GLFWwindow * window) {
 
     } while(points.size() <= 5);*/
 
+    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
     points = border_trace<T>(m_width, m_height, re_delta, im_delta, m_iter);
-    uint32_t counter = 0;
+    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+    std::cout << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[µs]" << std::endl;
 
     for(typename std::list<complex<T>>::iterator it = points.begin(); it != points.end(); ++it) {
 
@@ -230,8 +234,6 @@ template<typename T> void mandelbrot_set<T>::draw_list(GLFWwindow * window) {
             pixels[position * 3 + k] = 255;     
             
         }
-
-        counter++;
 
     }
 
@@ -251,7 +253,11 @@ template<typename T> void mandelbrot_set<T>::draw_list(GLFWwindow * window) {
 
 template<typename T> void mandelbrot_set<T>::draw(GLFWwindow * window) {
 
+
+    std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
     bruteforce_compute();
+    std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+    std::cout << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[µs]" << std::endl;
 
     std::unique_ptr<uint8_t[]> pixels(new uint8_t[m_width * m_height * 3]);
 
