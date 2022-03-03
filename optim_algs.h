@@ -51,19 +51,23 @@ template<typename T> void check_neighbours(
     uint32_t max_iter, 
     std::vector<complex<T>> vertices,
     std::queue<complex<T>>& pixel_queue,
-    std::shared_ptr<bool[]> checked_point,
-    std::list<complex<T>>& border_points
+    std::unique_ptr<uint32_t[]>& computed_pixels
 
 ) {
 
-    uint32_t current_iter = check_point(current_point, max_iter);
-    //checked_point[get_array_position(current_point, width, height)] = 1;
+    uint32_t current_iter = max_iter + 1;
+    uint32_t current_index = get_array_position(current_point, width, height);
 
-    /*if(checked_point[get_array_position(current_point, width, height)] != 1){ 
+    if(computed_pixels[current_index] != current_iter) {
         
-        border_points.push_back(current_point);
-        
-    }*/
+        current_iter = computed_pixels[current_index];
+
+    } else {
+
+        current_iter = check_point(current_point, max_iter);
+        computed_pixels[current_index] = current_iter;
+
+    }
 
     /* Check if the four points along the main axis do exist (i.e. the current point is not on the border of the image), and
     ** encode the respective boolean values as follows:
@@ -102,14 +106,14 @@ template<typename T> void check_neighbours(
         complex<T> point_to_check = current_point + offsets[i];
         uint32_t point_index = get_array_position(point_to_check, width, height);
 
-        if(border_existence[i] && checked_point[point_index] != 1) {
+        if(border_existence[i] && computed_pixels[point_index] == max_iter + 1) {
             
-            if(check_point(point_to_check, max_iter) != current_iter) {
+            uint32_t neighbor_iter = check_point(point_to_check, max_iter);
             
-                border_points.push_back(point_to_check);
+            if(neighbor_iter != current_iter) {
+            
                 pixel_queue.push(point_to_check);
-
-                checked_point[point_index] = 1;
+                computed_pixels[point_index] = neighbor_iter;
 
             }
 
@@ -128,14 +132,14 @@ template<typename T> void check_neighbours(
             complex<T> point_to_check = current_point + offsets[i] + offsets[j];
             uint32_t point_index = get_array_position(point_to_check, width, height);
 
-            if (border_existence[i] && border_existence[j] && checked_point[point_index] != 1) {
+            if (border_existence[i] && border_existence[j] && computed_pixels[point_index] == max_iter + 1) {
                 
-                if(check_point(point_to_check, max_iter) != current_iter) {
-            
-                    border_points.push_back(point_to_check);
-                    pixel_queue.push(point_to_check);
+                uint32_t neighbor_iter = check_point(point_to_check, max_iter);
 
-                    checked_point[point_index] = 1;
+                if(neighbor_iter != current_iter) {
+            
+                    pixel_queue.push(point_to_check);
+                    computed_pixels[point_index] = neighbor_iter;
 
                 }
 
@@ -147,9 +151,44 @@ template<typename T> void check_neighbours(
 
 }
 
-template<typename T> std::list<complex<T>> border_trace(    
+void color_all(
     
-    //std::list<complex<T>> vertices,
+    uint32_t width, 
+    uint32_t height, 
+    uint32_t max_iter,
+    std::unique_ptr<uint32_t[]>& computed_pixels
+    
+) {
+
+    for (size_t i = 0; i < height; ++i) {
+
+        uint32_t vertical_position = i * width;
+        uint32_t current_iter = computed_pixels[vertical_position];
+
+        for (size_t j = 0; j < width; ++j) {
+            
+            uint32_t full_position = vertical_position + j;
+            uint32_t current_value = computed_pixels[full_position];
+
+            if(current_value == max_iter + 1) {
+                
+                computed_pixels[full_position] = current_iter;
+
+            } else if(current_value != max_iter + 1 && current_value != current_iter) {
+
+                current_iter = current_value;
+
+            }
+        
+        }
+        
+    }
+
+}
+
+template<typename T> std::unique_ptr<uint32_t[]> border_trace(    
+    
+    std::vector<complex<T>> vertices,
     uint32_t width,
     uint32_t height,
     T step_re, 
@@ -158,22 +197,20 @@ template<typename T> std::list<complex<T>> border_trace(
     
 ) {
 
-    //TODO: Hard-coded vertices need to be changed.
-
-    complex<T> bottom_left(-2.0, -2.0);
-    complex<T> upper_right(2.0, 2.0);
-
-    std::vector<complex<T>> test_vertices = {bottom_left, upper_right}; 
+    /* The frame is completely descriped by two opposite vertices (represented by their relative complex points). 
+    ** Here the bottom-left and upper right are chosen, encoded in a vector as follows:
+    ** {[0]: bottom-left, [1]: upper_right}
+    */
 
     std::queue<complex<T>> pixel_queue;
-    std::shared_ptr<bool[]> already_checked(new bool[width * height]);
+    std::unique_ptr<uint32_t[]> computed_pixels(new uint32_t[width * height]);
 
     for (size_t i = 0; i < height; ++i) {
             
         for (size_t j = 0; j < width; ++j) {
     
             uint32_t position = j + i * width;
-            already_checked[position] = 0;     
+            computed_pixels[position] = max_iter + 1;     
 
         }
 
@@ -181,30 +218,30 @@ template<typename T> std::list<complex<T>> border_trace(
 
     //Add image edges to pixel queue
 
-    for (T im = bottom_left.get_im(); im <= upper_right.get_im(); im += step_im) {
+    for (T im = vertices[0].get_im(); im <= vertices[1].get_im(); im += step_im) {
 
-        pixel_queue.push(complex<T>(bottom_left.get_re(), im));
-        pixel_queue.push(complex<T>(upper_right.get_re(), im));
+        pixel_queue.push(complex<T>(vertices[0].get_re(), im));
+        pixel_queue.push(complex<T>(vertices[1].get_re(), im));
 
     }
     
-    for (T re = bottom_left.get_re(); re <= upper_right.get_re(); re += step_re) {
+    for (T re = vertices[0].get_re(); re <= vertices[1].get_re(); re += step_re) {
         
-        pixel_queue.push(complex<T>(re, bottom_left.get_im()));
-        pixel_queue.push(complex<T>(re, upper_right.get_im()));     
+        pixel_queue.push(complex<T>(re, vertices[0].get_im()));
+        pixel_queue.push(complex<T>(re, vertices[1].get_im()));     
 
     }
 
-    std::list<complex<T>> border_points;
-
     while (!pixel_queue.empty()) {
         
-        check_neighbours(pixel_queue.front(), width, height, step_re, step_im, max_iter, test_vertices, pixel_queue, already_checked, border_points);
+        check_neighbours(pixel_queue.front(), width, height, step_re, step_im, max_iter, vertices, pixel_queue, computed_pixels);
         pixel_queue.pop();
 
     }
 
-    return border_points;
+    color_all(width, height, max_iter, computed_pixels);
+
+    return computed_pixels;
 
 }
 
