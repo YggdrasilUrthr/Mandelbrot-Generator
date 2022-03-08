@@ -49,8 +49,7 @@ template<typename T> class mandelbrot_set {
 
         };
 
-        void draw(GLFWwindow *);
-        void draw_list(GLFWwindow *);
+        std::unique_ptr<uint8_t[]> compute_pixels();
 
     private:
 
@@ -97,7 +96,7 @@ template<typename T> void mandelbrot_set<T>::bruteforce_compute(){
         
 }
 
-template<typename T> void mandelbrot_set<T>::draw(GLFWwindow * window) {
+template<typename T> std::unique_ptr<uint8_t[]> mandelbrot_set<T>::compute_pixels() {
 
     //TODO This vertices may be changed via GUI or externally.
 
@@ -175,16 +174,6 @@ template<typename T> void mandelbrot_set<T>::draw(GLFWwindow * window) {
 
     }
     
-    do {
-
-        glClear(GL_COLOR_BUFFER_BIT);
-        glDrawPixels(m_width, m_height, GL_RGB, GL_UNSIGNED_BYTE, pixels.get());
-
-        glfwSwapBuffers(window);
-        glfwPollEvents();
-
-    } while(glfwGetKey(window, GLFW_KEY_ESCAPE) != GLFW_PRESS && glfwWindowShouldClose(window) == 0);
-
-    return;
-
+    return pixels;
+    
 }
