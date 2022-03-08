@@ -39,3 +39,6 @@ Old/
 
 # Local libraries
 gmp-6.2.1/
+
+# Test Scripts
+*.py

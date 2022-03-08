@@ -45,7 +45,13 @@ template<typename T> class mandelbrot_set {
             
         ) : m_width(width), m_height(height), m_iter(iter), m_color_mode(color), m_optim_type(optim_type) {
 
-            m_points = std::unique_ptr<uint32_t[]>(new uint32_t[m_width * m_height]);
+            m_points = std::unique_ptr<float[]>(new float[m_width * m_height]);
+
+            if (m_color_mode) {
+
+                generate_palette();
+
+            }
 
         };
 
@@ -60,11 +66,39 @@ template<typename T> class mandelbrot_set {
         color_mode m_color_mode;
         optimization_type m_optim_type;
 
-        std::unique_ptr<uint32_t[]> m_points;
+        std::unique_ptr<float[]> m_points;
+        std::unique_ptr<uint8_t[]> m_palette;
 
         void bruteforce_compute();
+        void generate_palette();
 
 };
+
+template<typename T> void mandelbrot_set<T>::generate_palette() {
+
+    m_palette = std::unique_ptr<uint8_t[]>(new uint8_t[6144]);
+
+    uint8_t ctrl_points[12] = {
+
+        0, 7, 100,
+        32, 107, 203,
+        237, 255, 255,
+        255, 170, 0
+
+    };
+
+    for (size_t i = 0; i < 6144; i += 12) {
+        
+        for (size_t j = 0; j < 12; ++j) {
+            
+            m_palette[i + j] = ctrl_points[j];
+
+        }
+        
+
+    }
+
+}
 
 template<typename T> void mandelbrot_set<T>::bruteforce_compute(){
 
@@ -79,16 +113,6 @@ template<typename T> void mandelbrot_set<T>::bruteforce_compute(){
             uint32_t position = j + i * m_width;
             
             m_points[position] = check_point<T>(point, m_iter);
-
-            if (m_points[position] > m_max_iter_encountered) {
-                
-                m_max_iter_encountered = m_points[position];
-
-            } else if (m_points[position] == 0)
-            {
-                m_points[position] = 0;
-            }
-            
 
         }
 
@@ -116,7 +140,8 @@ template<typename T> std::unique_ptr<uint8_t[]> mandelbrot_set<T>::compute_pixel
         T re_delta = static_cast<T>(4.0 * 1.0 / m_width);
         T im_delta =  static_cast<T>(4.0 * 1.0 / m_height);
 
-        m_points = border_trace<T>(frame_vertices, m_width, m_height, re_delta, im_delta, m_iter);
+        // Need to implement coloring on bordertracing
+        //m_points = border_trace<T>(frame_vertices, m_width, m_height, re_delta, im_delta, m_iter);
 
     }
     
@@ -133,11 +158,44 @@ template<typename T> std::unique_ptr<uint8_t[]> mandelbrot_set<T>::compute_pixel
 
                 uint32_t position = j + i * m_width;
 
-                for (uint8_t k = 0; k < 3; ++k) {
+                //for (uint8_t k = 0; k < 3; ++k) {
 
-                    pixels[position * 3 + k] = m_points[position] * 255 / m_max_iter_encountered;     
+                    uint32_t palette_position1 = floor(m_points[position]);
+                    uint32_t palette_position2 = floor(m_points[position]) + 1;
+
+                    uint8_t RGB1[3] = {
+                        
+                        m_palette[palette_position1],
+                        m_palette[palette_position1 + 1],
+                        m_palette[palette_position1 + 2]
+                        
+                    };
+
+                    uint8_t RGB2[3] = {
+                        
+                        m_palette[palette_position2],
+                        m_palette[palette_position2 + 1],
+                        m_palette[palette_position2 + 2]
+                    
+                    };
+
+                    //pixels[position * 3 + k] = m_points[position] * 255 / m_max_iter_encountered;     
                 
-                }
+                    float junk;
+
+                    uint8_t RGB[3] = {
+
+                        lerp(RGB1[0], RGB2[0], modf(m_points[position], &junk)),
+                        lerp(RGB1[1], RGB2[1], modf(m_points[position], &junk)),
+                        lerp(RGB1[2], RGB2[2], modf(m_points[position], &junk)),
+
+                    };
+
+                    pixels[position * 3] = RGB[0];
+                    pixels[position * 3 + 1] = RGB[1];
+                    pixels[position * 3 + 2] = RGB[2];
+
+                //}
                 
             }
             

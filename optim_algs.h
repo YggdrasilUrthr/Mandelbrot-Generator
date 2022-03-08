@@ -6,7 +6,13 @@
 
 #pragma once
 
-template<typename T> uint32_t check_point(const complex<T> &point, uint32_t max_iter) {
+float lerp(float a, float b, float t) {
+    
+    return a + t * (b - a);
+
+}
+
+template<typename T> float check_point(const complex<T> &point, uint32_t max_iter) {
 
     complex<T> z(0.0, 0.0);
 
@@ -14,7 +20,13 @@ template<typename T> uint32_t check_point(const complex<T> &point, uint32_t max_
     
         if(z.get_mod() > 2) {
 
-            return i;
+            float z_re = static_cast<float>(z.get_re());
+            float z_im = static_cast<float>(z.get_im());
+
+            float log_z = log(z_re * z_re + z_im * z_im) / 2.0;
+            float nu = log(log_z / log(2)) / log(2);
+
+            return static_cast<float>(i) + 1.0 - nu;
 
         }
 
@@ -22,7 +34,7 @@ template<typename T> uint32_t check_point(const complex<T> &point, uint32_t max_
     
     }
 
-    return 0;
+    return 0.0;
 
 };
 
