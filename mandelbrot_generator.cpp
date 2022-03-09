@@ -89,7 +89,6 @@ int main(int argc, char ** argv){
 
         glClear(GL_COLOR_BUFFER_BIT);
         glDrawPixels(params[0], params[1], GL_RGB, GL_UNSIGNED_BYTE, pixels.get());
-
         glfwGetCursorPos(window, &x_pos, &y_pos);
 
         // Draw box around cursor

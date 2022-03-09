@@ -8,6 +8,8 @@
 #include <GL/gl.h>
 #include <GLFW/glfw3.h>
 
+#include <boost/math/interpolators/barycentric_rational.hpp>
+
 #include "optim_algs.h"
 
 #define DEFAULT_WIDTH 800
@@ -67,7 +69,7 @@ template<typename T> class mandelbrot_set {
         optimization_type m_optim_type;
 
         std::unique_ptr<float[]> m_points;
-        std::unique_ptr<uint8_t[]> m_palette;
+        std::vector<boost::math::barycentric_rational<float>> m_interpolated_RGB;
 
         void bruteforce_compute();
         void generate_palette();
@@ -76,27 +78,14 @@ template<typename T> class mandelbrot_set {
 
 template<typename T> void mandelbrot_set<T>::generate_palette() {
 
-    m_palette = std::unique_ptr<uint8_t[]>(new uint8_t[6144]);
+    std::vector<float> x_ctrl = {0, 0.16, 0.42, 0.6425, 0.8575, 1.0};
+    std::vector<float> R_ctrl = {0., 32., 237., 255., 0., 0.};
+    std::vector<float> G_ctrl = {7., 107., 255., 170., 2., 7.};
+    std::vector<float> B_ctrl = {100., 203., 255., 0., 0., 100.};
 
-    uint8_t ctrl_points[12] = {
-
-        0, 7, 100,
-        32, 107, 203,
-        237, 255, 255,
-        255, 170, 0
-
-    };
-
-    for (size_t i = 0; i < 6144; i += 12) {
-        
-        for (size_t j = 0; j < 12; ++j) {
-            
-            m_palette[i + j] = ctrl_points[j];
-
-        }
-        
-
-    }
+    m_interpolated_RGB.push_back(boost::math::barycentric_rational<float>(x_ctrl.data(), R_ctrl.data(), x_ctrl.size()));
+    m_interpolated_RGB.push_back(boost::math::barycentric_rational<float>(x_ctrl.data(), G_ctrl.data(), x_ctrl.size()));
+    m_interpolated_RGB.push_back(boost::math::barycentric_rational<float>(x_ctrl.data(), B_ctrl.data(), x_ctrl.size()));
 
 }
 
@@ -140,8 +129,7 @@ template<typename T> std::unique_ptr<uint8_t[]> mandelbrot_set<T>::compute_pixel
         T re_delta = static_cast<T>(4.0 * 1.0 / m_width);
         T im_delta =  static_cast<T>(4.0 * 1.0 / m_height);
 
-        // Need to implement coloring on bordertracing
-        //m_points = border_trace<T>(frame_vertices, m_width, m_height, re_delta, im_delta, m_iter);
+        m_points = border_trace<T>(frame_vertices, m_width, m_height, re_delta, im_delta, m_iter);
 
     }
     
@@ -153,50 +141,31 @@ template<typename T> std::unique_ptr<uint8_t[]> mandelbrot_set<T>::compute_pixel
     if (m_color_mode) {
 
         for (size_t i = 0; i < m_height; ++i) {
-            
+
             for (size_t j = 0; j < m_width; ++j) {
 
                 uint32_t position = j + i * m_width;
 
-                //for (uint8_t k = 0; k < 3; ++k) {
+                if (m_points[position] != m_iter) {
 
-                    uint32_t palette_position1 = floor(m_points[position]);
-                    uint32_t palette_position2 = floor(m_points[position]) + 1;
+                    float x_value = m_points[position] / m_iter;
 
-                    uint8_t RGB1[3] = {
+                    for (uint8_t i = 0; i < 3; ++i) {
                         
-                        m_palette[palette_position1],
-                        m_palette[palette_position1 + 1],
-                        m_palette[palette_position1 + 2]
+                        pixels[position * 3 + i] = floor(m_interpolated_RGB[i](x_value));
+
+                    }
+
+                } else {
+
+                    for (uint8_t i = 0; i < 3; ++i) {
                         
-                    };
+                        pixels[position * 3 + i] = 0;
 
-                    uint8_t RGB2[3] = {
-                        
-                        m_palette[palette_position2],
-                        m_palette[palette_position2 + 1],
-                        m_palette[palette_position2 + 2]
-                    
-                    };
+                    }
 
-                    //pixels[position * 3 + k] = m_points[position] * 255 / m_max_iter_encountered;     
-                
-                    float junk;
+                }
 
-                    uint8_t RGB[3] = {
-
-                        lerp(RGB1[0], RGB2[0], modf(m_points[position], &junk)),
-                        lerp(RGB1[1], RGB2[1], modf(m_points[position], &junk)),
-                        lerp(RGB1[2], RGB2[2], modf(m_points[position], &junk)),
-
-                    };
-
-                    pixels[position * 3] = RGB[0];
-                    pixels[position * 3 + 1] = RGB[1];
-                    pixels[position * 3 + 2] = RGB[2];
-
-                //}
-                
             }
             
         }

@@ -18,15 +18,14 @@ template<typename T> float check_point(const complex<T> &point, uint32_t max_ite
 
     for (int i = 0; i < max_iter; ++i) {
     
-        if(z.get_mod() > 2) {
+        //TODO Fix escape radius for BW render (same for bordetrace)
 
-            float z_re = static_cast<float>(z.get_re());
-            float z_im = static_cast<float>(z.get_im());
+        if(z.get_mod() > 16) {  
 
-            float log_z = log(z_re * z_re + z_im * z_im) / 2.0;
+            float log_z = log(z.get_mod_sqrd()) / 2;
             float nu = log(log_z / log(2)) / log(2);
 
-            return static_cast<float>(i) + 1.0 - nu;
+            return (float)(i) + 1 - nu;
 
         }
 
@@ -34,7 +33,7 @@ template<typename T> float check_point(const complex<T> &point, uint32_t max_ite
     
     }
 
-    return 0.0;
+    return max_iter;
 
 };
 
@@ -63,7 +62,7 @@ template<typename T> void check_neighbours(
     uint32_t max_iter, 
     std::vector<complex<T>> vertices,
     std::queue<complex<T>>& pixel_queue,
-    std::unique_ptr<uint32_t[]>& computed_pixels
+    std::unique_ptr<float[]>& computed_pixels
 
 ) {
 
@@ -118,11 +117,11 @@ template<typename T> void check_neighbours(
         complex<T> point_to_check = current_point + offsets[i];
         uint32_t point_index = get_array_position(point_to_check, width, height);
 
-        if(border_existence[i] && computed_pixels[point_index] == max_iter + 1) {
+        if(border_existence[i] && ceil(computed_pixels[point_index]) == max_iter + 1) {
             
-            uint32_t neighbor_iter = check_point(point_to_check, max_iter);
+            float neighbor_iter = check_point(point_to_check, max_iter);
             
-            if(neighbor_iter != current_iter) {
+            if(ceil(neighbor_iter) != ceil(current_iter)) {
             
                 pixel_queue.push(point_to_check);
                 computed_pixels[point_index] = neighbor_iter;
@@ -144,11 +143,11 @@ template<typename T> void check_neighbours(
             complex<T> point_to_check = current_point + offsets[i] + offsets[j];
             uint32_t point_index = get_array_position(point_to_check, width, height);
 
-            if (border_existence[i] && border_existence[j] && computed_pixels[point_index] == max_iter + 1) {
+            if (border_existence[i] && border_existence[j] && ceil(computed_pixels[point_index]) == max_iter + 1) {
                 
-                uint32_t neighbor_iter = check_point(point_to_check, max_iter);
+                float neighbor_iter = check_point(point_to_check, max_iter);
 
-                if(neighbor_iter != current_iter) {
+                if(ceil(neighbor_iter) != ceil(current_iter)) {
             
                     pixel_queue.push(point_to_check);
                     computed_pixels[point_index] = neighbor_iter;
@@ -168,25 +167,25 @@ void color_all(
     uint32_t width, 
     uint32_t height, 
     uint32_t max_iter,
-    std::unique_ptr<uint32_t[]>& computed_pixels
+    std::unique_ptr<float[]>& computed_pixels
     
 ) {
 
     for (size_t i = 0; i < height; ++i) {
 
         uint32_t vertical_position = i * width;
-        uint32_t current_iter = computed_pixels[vertical_position];
+        float current_iter = computed_pixels[vertical_position];
 
         for (size_t j = 0; j < width; ++j) {
             
             uint32_t full_position = vertical_position + j;
-            uint32_t current_value = computed_pixels[full_position];
+            float current_value = computed_pixels[full_position];
 
-            if(current_value == max_iter + 1) {
+            if(ceil(current_value) == max_iter + 1) {
                 
                 computed_pixels[full_position] = current_iter;
 
-            } else if(current_value != max_iter + 1 && current_value != current_iter) {
+            } else if(ceil(current_value) != max_iter + 1 && ceil(current_value) != current_iter) {
 
                 current_iter = current_value;
 
@@ -198,7 +197,7 @@ void color_all(
 
 }
 
-template<typename T> std::unique_ptr<uint32_t[]> border_trace(    
+template<typename T> std::unique_ptr<float[]> border_trace(    
     
     std::vector<complex<T>> vertices,
     uint32_t width,
@@ -215,7 +214,7 @@ template<typename T> std::unique_ptr<uint32_t[]> border_trace(
     */
 
     std::queue<complex<T>> pixel_queue;
-    std::unique_ptr<uint32_t[]> computed_pixels(new uint32_t[width * height]);
+    std::unique_ptr<float[]> computed_pixels(new float[width * height]);
 
     for (size_t i = 0; i < height; ++i) {
             
