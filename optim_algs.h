@@ -12,7 +12,25 @@ float lerp(float a, float b, float t) {
 
 }
 
-template<typename T> float check_point(const complex<T> &point, uint32_t max_iter) {
+template<typename T> struct escape_data {
+
+    escape_data(uint32_t in_iteration, complex<T> in_point) : m_iteration(in_iteration), m_escaped_point(in_point) {};
+
+    uint32_t m_iteration;
+    complex<T> m_escaped_point;
+
+};
+
+template<typename T> float get_smooth_value(escape_data<T> esc_data) {
+
+    float log_z = log(esc_data.m_escaped_point.get_mod_sqrd()) / 2;
+    float nu = log(log_z / log(2)) / log(2);
+
+    return static_cast<float>(esc_data.m_iteration) + 1 - nu;
+
+}
+
+template<typename T> escape_data<T> check_point(const complex<T> &point, uint32_t max_iter) {
 
     complex<T> z(0.0, 0.0);
 
@@ -22,10 +40,12 @@ template<typename T> float check_point(const complex<T> &point, uint32_t max_ite
 
         if(z.get_mod() > 16) {  
 
-            float log_z = log(z.get_mod_sqrd()) / 2;
-            float nu = log(log_z / log(2)) / log(2);
+            //float log_z = log(z.get_mod_sqrd()) / 2;
+            //float nu = log(log_z / log(2)) / log(2);
 
-            return (float)(i) + 1 - nu;
+            //return (float)(i) + 1 - nu;
+
+            return escape_data<T>(i, z);
 
         }
 
@@ -33,7 +53,7 @@ template<typename T> float check_point(const complex<T> &point, uint32_t max_ite
     
     }
 
-    return max_iter;
+    return escape_data<T>(max_iter, z);
 
 };
 
@@ -62,6 +82,7 @@ template<typename T> void check_neighbours(
     uint32_t max_iter, 
     std::vector<complex<T>> vertices,
     std::queue<complex<T>>& pixel_queue,
+    std::unique_ptr<uint32_t[]>& computed_iters,
     std::unique_ptr<float[]>& computed_pixels
 
 ) {
@@ -69,14 +90,17 @@ template<typename T> void check_neighbours(
     uint32_t current_iter = max_iter + 1;
     uint32_t current_index = get_array_position(current_point, width, height);
 
-    if(computed_pixels[current_index] != current_iter) {
+    if(computed_iters[current_index] != current_iter) {
         
-        current_iter = computed_pixels[current_index];
+        current_iter = computed_iters[current_index];
 
     } else {
 
-        current_iter = check_point(current_point, max_iter);
-        computed_pixels[current_index] = current_iter;
+        escape_data<T> current_escape = check_point(current_point, max_iter);
+        current_iter = current_escape.m_iteration;
+        
+        computed_iters[current_index] = current_iter;
+        computed_pixels[current_index] = get_smooth_value(current_escape);
 
     }
 
@@ -117,14 +141,17 @@ template<typename T> void check_neighbours(
         complex<T> point_to_check = current_point + offsets[i];
         uint32_t point_index = get_array_position(point_to_check, width, height);
 
-        if(border_existence[i] && ceil(computed_pixels[point_index]) == max_iter + 1) {
+        if(border_existence[i] && computed_iters[point_index] == max_iter + 1) {
             
-            float neighbor_iter = check_point(point_to_check, max_iter);
+            escape_data<T> neighbor_escape = check_point(point_to_check, max_iter);
+            uint32_t neighbor_iter = neighbor_escape.m_iteration;
             
-            if(ceil(neighbor_iter) != ceil(current_iter)) {
+            if(neighbor_iter != current_iter) {
             
                 pixel_queue.push(point_to_check);
-                computed_pixels[point_index] = neighbor_iter;
+
+                computed_iters[point_index] = neighbor_iter;
+                computed_pixels[point_index] = get_smooth_value(neighbor_escape);
 
             }
 
@@ -143,14 +170,17 @@ template<typename T> void check_neighbours(
             complex<T> point_to_check = current_point + offsets[i] + offsets[j];
             uint32_t point_index = get_array_position(point_to_check, width, height);
 
-            if (border_existence[i] && border_existence[j] && ceil(computed_pixels[point_index]) == max_iter + 1) {
+            if (border_existence[i] && border_existence[j] && computed_iters[point_index] == max_iter + 1) {
                 
-                float neighbor_iter = check_point(point_to_check, max_iter);
-
-                if(ceil(neighbor_iter) != ceil(current_iter)) {
+                escape_data<T> neighbor_escape = check_point(point_to_check, max_iter);
+                uint32_t neighbor_iter = neighbor_escape.m_iteration;
+            
+                if(neighbor_iter != current_iter) {
             
                     pixel_queue.push(point_to_check);
-                    computed_pixels[point_index] = neighbor_iter;
+
+                    computed_iters[point_index] = neighbor_iter;
+                    computed_pixels[point_index] = get_smooth_value(neighbor_escape);
 
                 }
 
@@ -167,6 +197,7 @@ void color_all(
     uint32_t width, 
     uint32_t height, 
     uint32_t max_iter,
+    std::unique_ptr<uint32_t[]>& computed_iters,
     std::unique_ptr<float[]>& computed_pixels
     
 ) {
@@ -174,20 +205,24 @@ void color_all(
     for (size_t i = 0; i < height; ++i) {
 
         uint32_t vertical_position = i * width;
-        float current_iter = computed_pixels[vertical_position];
+        
+        uint32_t row_iter = computed_iters[vertical_position];
+        float row_value = computed_pixels[vertical_position];
 
         for (size_t j = 0; j < width; ++j) {
             
             uint32_t full_position = vertical_position + j;
+
+            uint32_t current_iter = computed_iters[full_position];
             float current_value = computed_pixels[full_position];
 
-            if(ceil(current_value) == max_iter + 1) {
+            if(current_iter == max_iter + 1) {
                 
-                computed_pixels[full_position] = current_iter;
+                computed_pixels[full_position] = row_value;
 
-            } else if(ceil(current_value) != max_iter + 1 && ceil(current_value) != current_iter) {
+            } else if(current_iter != max_iter + 1 && row_iter != current_iter) {
 
-                current_iter = current_value;
+                row_value = current_value;
 
             }
         
@@ -214,6 +249,8 @@ template<typename T> std::unique_ptr<float[]> border_trace(
     */
 
     std::queue<complex<T>> pixel_queue;
+
+    std::unique_ptr<uint32_t[]> computed_iters(new uint32_t[width * height]);
     std::unique_ptr<float[]> computed_pixels(new float[width * height]);
 
     for (size_t i = 0; i < height; ++i) {
@@ -221,7 +258,9 @@ template<typename T> std::unique_ptr<float[]> border_trace(
         for (size_t j = 0; j < width; ++j) {
     
             uint32_t position = j + i * width;
+
             computed_pixels[position] = max_iter + 1;     
+            computed_iters[position] = max_iter + 1;
 
         }
 
@@ -245,12 +284,12 @@ template<typename T> std::unique_ptr<float[]> border_trace(
 
     while (!pixel_queue.empty()) {
         
-        check_neighbours(pixel_queue.front(), width, height, step_re, step_im, max_iter, vertices, pixel_queue, computed_pixels);
+        check_neighbours(pixel_queue.front(), width, height, step_re, step_im, max_iter, vertices, pixel_queue, computed_iters, computed_pixels);
         pixel_queue.pop();
 
     }
 
-    color_all(width, height, max_iter, computed_pixels);
+    color_all(width, height, max_iter, computed_iters, computed_pixels);
 
     return computed_pixels;
 

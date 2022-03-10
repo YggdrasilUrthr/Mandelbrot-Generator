@@ -101,7 +101,8 @@ template<typename T> void mandelbrot_set<T>::bruteforce_compute(){
 
             uint32_t position = j + i * m_width;
             
-            m_points[position] = check_point<T>(point, m_iter);
+            escape_data<T> point_escape = check_point<T>(point, m_iter);
+            m_points[position] = get_smooth_value(point_escape);
 
         }
 
