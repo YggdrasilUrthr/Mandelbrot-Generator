@@ -40,11 +40,6 @@ template<typename T> escape_data<T> check_point(const complex<T> &point, uint32_
 
         if(z.get_mod() > 16) {  
 
-            //float log_z = log(z.get_mod_sqrd()) / 2;
-            //float nu = log(log_z / log(2)) / log(2);
-
-            //return (float)(i) + 1 - nu;
-
             return escape_data<T>(i, z);
 
         }
@@ -63,10 +58,10 @@ template<typename T> T map(T old_max, T old_min, T new_max, T new_min, T value) 
 
 }
 
-template<typename T> uint32_t get_array_position(complex<T> point, uint32_t width, uint32_t height) {
+template<typename T> uint32_t get_array_position(std::vector<complex<T>> vertices, complex<T> point, uint32_t width, uint32_t height) {
 
-    size_t j = static_cast<size_t>(map<T>(2.0, -2.0, width, 0.0, static_cast<T>(point.get_re())));
-    size_t i = static_cast<size_t>(map<T>(2.0, -2.0, height, 0.0, static_cast<T>(point.get_im())));
+    size_t j = static_cast<size_t>(map<T>(vertices[1].get_re(), vertices[0].get_re(), width, 0.0, static_cast<T>(point.get_re())));
+    size_t i = static_cast<size_t>(map<T>(vertices[1].get_im(), vertices[0].get_im(), height, 0.0, static_cast<T>(point.get_im())));
 
     return j + i * width;
 
@@ -88,7 +83,7 @@ template<typename T> void check_neighbours(
 ) {
 
     uint32_t current_iter = max_iter + 1;
-    uint32_t current_index = get_array_position(current_point, width, height);
+    uint32_t current_index = get_array_position(vertices, current_point, width, height);
 
     if(computed_iters[current_index] != current_iter) {
         
@@ -139,7 +134,7 @@ template<typename T> void check_neighbours(
     for (uint8_t i = 0; i < 4; ++i) {
         
         complex<T> point_to_check = current_point + offsets[i];
-        uint32_t point_index = get_array_position(point_to_check, width, height);
+        uint32_t point_index = get_array_position(vertices, point_to_check, width, height);
 
         if(border_existence[i] && computed_iters[point_index] == max_iter + 1) {
             
@@ -168,7 +163,7 @@ template<typename T> void check_neighbours(
         for (uint8_t j = 2; j < 4; ++j) {
             
             complex<T> point_to_check = current_point + offsets[i] + offsets[j];
-            uint32_t point_index = get_array_position(point_to_check, width, height);
+            uint32_t point_index = get_array_position(vertices, point_to_check, width, height);
 
             if (border_existence[i] && border_existence[j] && computed_iters[point_index] == max_iter + 1) {
                 

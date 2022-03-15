@@ -48,6 +48,9 @@ template<typename T> class mandelbrot_set {
         ) : m_width(width), m_height(height), m_iter(iter), m_color_mode(color), m_optim_type(optim_type) {
 
             m_points = std::unique_ptr<float[]>(new float[m_width * m_height]);
+            
+            m_vertices.push_back(complex<T>(-2.0, -2.0));
+            m_vertices.push_back(complex<T>(2.0, 2.0));
 
             if (m_color_mode) {
 
@@ -58,6 +61,7 @@ template<typename T> class mandelbrot_set {
         };
 
         std::unique_ptr<uint8_t[]> compute_pixels();
+        void update_vertices(double x_pos, double y_pos);
 
     private:
 
@@ -70,6 +74,7 @@ template<typename T> class mandelbrot_set {
 
         std::unique_ptr<float[]> m_points;
         std::vector<boost::math::barycentric_rational<float>> m_interpolated_RGB;
+        std::vector<complex<T>> m_vertices;
 
         void bruteforce_compute();
         void generate_palette();
@@ -96,8 +101,8 @@ template<typename T> void mandelbrot_set<T>::bruteforce_compute(){
         for (size_t j = 0; j < m_width; ++j) {
 
             complex<T> point;
-            point.set_re(map<T>(static_cast<T>(m_width), 0.0, 2.0, -2.0, static_cast<T>(j)));
-            point.set_im(map<T>(static_cast<T>(m_height), 0.0, 2.0, -2.0, static_cast<T>(i))); 
+            point.set_re(map<T>(static_cast<T>(m_width), 0.0, m_vertices[1].get_re(), m_vertices[0].get_re(), static_cast<T>(j)));
+            point.set_im(map<T>(static_cast<T>(m_height), 0.0, m_vertices[1].get_im(), m_vertices[0].get_im(), static_cast<T>(i))); 
 
             uint32_t position = j + i * m_width;
             
@@ -112,13 +117,6 @@ template<typename T> void mandelbrot_set<T>::bruteforce_compute(){
 
 template<typename T> std::unique_ptr<uint8_t[]> mandelbrot_set<T>::compute_pixels() {
 
-    //TODO This vertices may be changed via GUI or externally.
-
-    complex<T> bottom_left(-2.0, -2.0);
-    complex<T> upper_right(2.0, 2.0);
-
-    std::vector<complex<T>> frame_vertices = {bottom_left, upper_right}; 
-
     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 
     if(m_optim_type == NONE) {
@@ -127,10 +125,15 @@ template<typename T> std::unique_ptr<uint8_t[]> mandelbrot_set<T>::compute_pixel
 
     } else if(m_optim_type == BORDER_TRACE) {
 
-        T re_delta = static_cast<T>(4.0 * 1.0 / m_width);
-        T im_delta =  static_cast<T>(4.0 * 1.0 / m_height);
+        // CHANGE THESE NAMES
 
-        m_points = border_trace<T>(frame_vertices, m_width, m_height, re_delta, im_delta, m_iter);
+        T width = m_vertices[1].get_re() - m_vertices[0].get_re();
+        T height = m_vertices[1].get_im() - m_vertices[0].get_im();
+
+        T re_delta = static_cast<T>(width / m_width);
+        T im_delta =  static_cast<T>(height / m_height);
+
+        m_points = border_trace<T>(m_vertices, m_width, m_height, re_delta, im_delta, m_iter);
 
     }
     
@@ -204,4 +207,27 @@ template<typename T> std::unique_ptr<uint8_t[]> mandelbrot_set<T>::compute_pixel
     
     return pixels;
     
+}
+
+template<typename T> void mandelbrot_set<T>::update_vertices(double x_pos, double y_pos) {
+
+    //Maybe save this?? (used in border-trace)
+
+    T width = m_vertices[1].get_re() - m_vertices[0].get_re();
+    T height = m_vertices[1].get_im() - m_vertices[0].get_im();
+
+    complex<T> center(
+
+        map(static_cast<T>(m_width), 0.0, m_vertices[1].get_re(), m_vertices[0].get_re(), x_pos),
+        map(static_cast<T>(m_height), 0.0, m_vertices[1].get_im(), m_vertices[0].get_im(), y_pos)
+
+    );
+
+    // TODO adjust zoom factor esternally, now hard-coded to 10
+
+    complex<T> diag_offset(width / 10, height / 10);
+
+    m_vertices[0] = center - diag_offset;
+    m_vertices[1] = center + diag_offset;
+
 }

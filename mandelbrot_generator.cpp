@@ -68,6 +68,7 @@ int main(int argc, char ** argv){
     }
 
     std::vector<double> click_point = {-1, -1}; 
+    std::vector<double> old_click_point = click_point;
 
     glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);
     glfwSetMouseButtonCallback(window, mouse_button_callback);
@@ -114,6 +115,16 @@ int main(int argc, char ** argv){
         glPopMatrix();
 
         // Handle events and update frame buffer 
+
+        if(click_point[0] != old_click_point[0] || click_point[1] != old_click_point[1]) {
+                
+            old_click_point = click_point;
+
+            mandelbrot.update_vertices(click_point[0], click_point[1]);
+            pixels = mandelbrot.compute_pixels();
+            std::cout << click_point[0] << std::endl;
+
+        }
 
         glfwPollEvents();
         glfwSwapBuffers(window);
