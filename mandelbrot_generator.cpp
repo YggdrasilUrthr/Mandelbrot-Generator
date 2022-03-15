@@ -3,6 +3,13 @@
 
 #include "mandelbrot.h"
 
+static void mouse_button_callback(GLFWwindow * window, int button, int action, int mods) {
+
+    double * data_ptr = static_cast<double *>(glfwGetWindowUserPointer(window));
+    glfwGetCursorPos(window, data_ptr, data_ptr + 1);
+
+}
+
 int main(int argc, char ** argv){
 
     uint32_t params[5] = {
@@ -60,8 +67,11 @@ int main(int argc, char ** argv){
     
     }
 
+    std::vector<double> click_point = {-1, -1}; 
+
     glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);
-    //glfwSetCursorPosCallback(window, cursorPositionCallback);
+    glfwSetMouseButtonCallback(window, mouse_button_callback);
+    glfwSetWindowUserPointer(window, click_point.data());
 
     mandelbrot_set<double> mandelbrot(
         
