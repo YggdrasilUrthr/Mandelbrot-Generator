@@ -1,7 +1,8 @@
 #pragma once
 
 #include <math.h>
-#include <gmpxx.h>
+#include <boost/multiprecision/gmp.hpp>
+#include <boost/multiprecision/mpfr.hpp>
 
 /* This is a very minimalistic implementation (it does not support any argument variable and it can only be used for floating point
 ** real and imaginary part) of complex numbers using some basic GMP functions. 
@@ -118,5 +119,5 @@ private:
 
 };
 
-typedef complex<mpf_class> complex_arb;
+typedef complex<boost::multiprecision::mpfr_float> complex_arb;
 typedef complex<double> complex_fix;

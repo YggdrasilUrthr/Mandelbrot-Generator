@@ -130,8 +130,8 @@ template<typename T> std::unique_ptr<uint8_t[]> mandelbrot_set<T>::compute_pixel
         T width = m_vertices[1].get_re() - m_vertices[0].get_re();
         T height = m_vertices[1].get_im() - m_vertices[0].get_im();
 
-        T re_delta = static_cast<T>(width / m_width);
-        T im_delta =  static_cast<T>(height / m_height);
+        T re_delta = static_cast<T>(width) / m_width;
+        T im_delta =  static_cast<T>(height) / m_height;
 
         m_points = border_trace<T>(m_vertices, m_width, m_height, re_delta, im_delta, m_iter);
 
@@ -218,8 +218,8 @@ template<typename T> void mandelbrot_set<T>::update_vertices(double x_pos, doubl
 
     complex<T> center(
 
-        map(static_cast<T>(m_width), 0.0, m_vertices[1].get_re(), m_vertices[0].get_re(), x_pos),
-        map(static_cast<T>(m_height), 0.0, m_vertices[1].get_im(), m_vertices[0].get_im(), y_pos)
+        map<T>(static_cast<T>(m_width), 0.0, m_vertices[1].get_re(), m_vertices[0].get_re(), x_pos),
+        map<T>(static_cast<T>(m_height), 0.0, m_vertices[1].get_im(), m_vertices[0].get_im(), y_pos)
 
     );
 

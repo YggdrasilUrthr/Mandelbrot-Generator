@@ -6,12 +6,6 @@
 
 #pragma once
 
-float lerp(float a, float b, float t) {
-    
-    return a + t * (b - a);
-
-}
-
 template<typename T> struct escape_data {
 
     escape_data(uint32_t in_iteration, complex<T> in_point) : m_iteration(in_iteration), m_escaped_point(in_point) {};
@@ -23,10 +17,10 @@ template<typename T> struct escape_data {
 
 template<typename T> float get_smooth_value(escape_data<T> esc_data) {
 
-    float log_z = log(esc_data.m_escaped_point.get_mod_sqrd()) / 2;
+    float log_z = log(static_cast<T>(esc_data.m_escaped_point.get_mod_sqrd())) / 2.0;
     float nu = log(log_z / log(2)) / log(2);
 
-    return static_cast<float>(esc_data.m_iteration) + 1 - nu;
+    return static_cast<float>(esc_data.m_iteration) + 1.0 - nu;
 
 }
 
@@ -67,23 +61,39 @@ template<typename T> uint32_t get_array_position(std::vector<complex<T>> vertice
 
 }
 
+template<typename T> complex<T> get_point_from_index(std::vector<complex<T>> vertices, size_t idx, uint32_t width, uint32_t height) {
+
+    uint32_t j = idx % width;
+    uint32_t i = static_cast<uint32_t>((idx - j) / width);
+
+    complex<T> point;
+    point.set_re(map<T>(static_cast<T>(width), 0.0, vertices[1].get_re(), vertices[0].get_re(), static_cast<T>(j)));
+    point.set_im(map<T>(static_cast<T>(height), 0.0, vertices[1].get_im(), vertices[0].get_im(), static_cast<T>(i))); 
+
+    return point;
+
+}
+
+//TODO change names for size_t
+
 template<typename T> void check_neighbours(
     
-    complex<T> current_point,
+    size_t current_index,
     uint32_t width,
     uint32_t height,
     T step_re,
     T step_im, 
     uint32_t max_iter, 
     std::vector<complex<T>> vertices,
-    std::queue<complex<T>>& pixel_queue,
+    std::queue<size_t>& pixel_queue,
     std::unique_ptr<uint32_t[]>& computed_iters,
     std::unique_ptr<float[]>& computed_pixels
 
 ) {
 
     uint32_t current_iter = max_iter + 1;
-    uint32_t current_index = get_array_position(vertices, current_point, width, height);
+    complex<T> current_point = get_point_from_index(vertices, current_index, width, height);
+
 
     if(computed_iters[current_index] != current_iter) {
         
@@ -118,14 +128,7 @@ template<typename T> void check_neighbours(
     ** {[0]: right, [1]: left, [2]: up, [3]: down}
     */
 
-    complex<T> offsets[] = {
-
-        complex<T>(step_re, 0.0),
-        complex<T>(-step_re, 0.0),
-        complex<T>(0.0, step_im),
-        complex<T>(0.0, -step_im)
-
-    };
+    int32_t offsets[] = {1, -1, width, - width};
 
     /* Check if the four pixels along the main axis (if they exist and have not been already checked) are border points, in which
     ** case they are added to the output point list.
@@ -133,8 +136,8 @@ template<typename T> void check_neighbours(
 
     for (uint8_t i = 0; i < 4; ++i) {
         
-        complex<T> point_to_check = current_point + offsets[i];
-        uint32_t point_index = get_array_position(vertices, point_to_check, width, height);
+        uint32_t point_index = current_index + offsets[i];
+        complex<T> point_to_check = get_point_from_index(vertices, point_index, width, height);
 
         if(border_existence[i] && computed_iters[point_index] == max_iter + 1) {
             
@@ -143,7 +146,7 @@ template<typename T> void check_neighbours(
             
             if(neighbor_iter != current_iter) {
             
-                pixel_queue.push(point_to_check);
+                pixel_queue.push(point_index);
 
                 computed_iters[point_index] = neighbor_iter;
                 computed_pixels[point_index] = get_smooth_value(neighbor_escape);
@@ -162,8 +165,8 @@ template<typename T> void check_neighbours(
        
         for (uint8_t j = 2; j < 4; ++j) {
             
-            complex<T> point_to_check = current_point + offsets[i] + offsets[j];
-            uint32_t point_index = get_array_position(vertices, point_to_check, width, height);
+            uint32_t point_index = current_index + offsets[i] + offsets[j];
+            complex<T> point_to_check = get_point_from_index(vertices, point_index, width, height);
 
             if (border_existence[i] && border_existence[j] && computed_iters[point_index] == max_iter + 1) {
                 
@@ -172,7 +175,7 @@ template<typename T> void check_neighbours(
             
                 if(neighbor_iter != current_iter) {
             
-                    pixel_queue.push(point_to_check);
+                    pixel_queue.push(point_index);
 
                     computed_iters[point_index] = neighbor_iter;
                     computed_pixels[point_index] = get_smooth_value(neighbor_escape);
@@ -243,7 +246,7 @@ template<typename T> std::unique_ptr<float[]> border_trace(
     ** {[0]: bottom-left, [1]: upper_right}
     */
 
-    std::queue<complex<T>> pixel_queue;
+    std::queue<size_t> pixel_queue;
 
     std::unique_ptr<uint32_t[]> computed_iters(new uint32_t[width * height]);
     std::unique_ptr<float[]> computed_pixels(new float[width * height]);
@@ -263,17 +266,17 @@ template<typename T> std::unique_ptr<float[]> border_trace(
 
     //Add image edges to pixel queue
 
-    for (T im = vertices[0].get_im(); im <= vertices[1].get_im(); im += step_im) {
+    for (size_t i = 0; i < width; ++i) {
 
-        pixel_queue.push(complex<T>(vertices[0].get_re(), im));
-        pixel_queue.push(complex<T>(vertices[1].get_re(), im));
+        pixel_queue.push(i);
+        pixel_queue.push((height - 1) * width + i);
 
     }
     
-    for (T re = vertices[0].get_re(); re <= vertices[1].get_re(); re += step_re) {
+    for (size_t i = 0; i < height; ++i) {
         
-        pixel_queue.push(complex<T>(re, vertices[0].get_im()));
-        pixel_queue.push(complex<T>(re, vertices[1].get_im()));     
+        pixel_queue.push(i * width);
+        pixel_queue.push(width - 1 + i * width);   
 
     }
 

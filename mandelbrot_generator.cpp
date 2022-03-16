@@ -12,17 +12,18 @@ static void mouse_button_callback(GLFWwindow * window, int button, int action, i
 
 int main(int argc, char ** argv){
 
-    uint32_t params[5] = {
+    uint32_t params[6] = {
         
         DEFAULT_WIDTH, 
         DEFAULT_HEIGHT, 
         DEFAULT_ITER, 
         mandelbrot_set<double>::color_mode::BOOLEAN,
-        mandelbrot_set<double>::optimization_type::NONE
+        mandelbrot_set<double>::optimization_type::NONE,
+        0
 
     };
 
-    if (argc > 1 && argc <= 6) {
+    if (argc > 1 && argc <= 7) {
         
         for(size_t i = 1; i < argc; ++i) {
 
@@ -74,7 +75,7 @@ int main(int argc, char ** argv){
     glfwSetMouseButtonCallback(window, mouse_button_callback);
     glfwSetWindowUserPointer(window, click_point.data());
 
-    mandelbrot_set<double> mandelbrot(
+    mandelbrot_set<double> fixed_mandelbrot = mandelbrot_set<double>(
         
         params[0], params[1], params[2], 
         mandelbrot_set<double>::color_mode(params[3]), 
@@ -82,7 +83,25 @@ int main(int argc, char ** argv){
         
     );
 
-    std::unique_ptr<uint8_t[]> pixels = mandelbrot.compute_pixels();
+    mandelbrot_set<boost::multiprecision::mpfr_float> arb_mandelbrot = mandelbrot_set<boost::multiprecision::mpfr_float>(
+        
+        params[0], params[1], params[2], 
+        mandelbrot_set<boost::multiprecision::mpfr_float>::color_mode(params[3]), 
+        mandelbrot_set<boost::multiprecision::mpfr_float>::optimization_type(params[4])
+        
+    );
+
+    std::unique_ptr<uint8_t[]> pixels;
+    
+    if(params[5]) {
+    
+        pixels = arb_mandelbrot.compute_pixels();
+
+    } else {
+
+        pixels = fixed_mandelbrot.compute_pixels();
+
+    }
 
     // Set OpenGL viewport and initialize scaling matrices with an identity matrix.
 
@@ -120,9 +139,17 @@ int main(int argc, char ** argv){
                 
             old_click_point = click_point;
 
-            mandelbrot.update_vertices(click_point[0], click_point[1]);
-            pixels = mandelbrot.compute_pixels();
-            std::cout << click_point[0] << std::endl;
+            if(params[5]) {
+    
+                arb_mandelbrot.update_vertices(click_point[0], params[1] - click_point[1]);
+                pixels = arb_mandelbrot.compute_pixels();
+
+            } else {
+
+                fixed_mandelbrot.update_vertices(click_point[0], params[1] - click_point[1]);
+                pixels = fixed_mandelbrot.compute_pixels();
+
+            }
 
         }
 
