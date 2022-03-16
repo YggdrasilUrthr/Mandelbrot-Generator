@@ -47,16 +47,10 @@ template<typename T> class mandelbrot_set {
             
         ) : m_width(width), m_height(height), m_iter(iter), m_color_mode(color), m_optim_type(optim_type) {
 
-            m_points = std::unique_ptr<float[]>(new float[m_width * m_height]);
+            m_points = std::unique_ptr<uint32_t[]>(new uint32_t[m_width * m_height]);
             
             m_vertices.push_back(complex<T>(-2.0, -2.0));
             m_vertices.push_back(complex<T>(2.0, 2.0));
-
-            if (m_color_mode) {
-
-                generate_palette();
-
-            }
 
         };
 
@@ -72,25 +66,31 @@ template<typename T> class mandelbrot_set {
         color_mode m_color_mode;
         optimization_type m_optim_type;
 
-        std::unique_ptr<float[]> m_points;
-        std::vector<boost::math::barycentric_rational<float>> m_interpolated_RGB;
+        std::unique_ptr<uint32_t[]> m_points;
         std::vector<complex<T>> m_vertices;
 
         void bruteforce_compute();
-        void generate_palette();
+        std::vector<uint8_t> generate_color(uint32_t iter);
 
 };
 
-template<typename T> void mandelbrot_set<T>::generate_palette() {
+template<typename T> std::vector<uint8_t> mandelbrot_set<T>::generate_color(uint32_t iter) {
 
-    std::vector<float> x_ctrl = {0, 0.16, 0.42, 0.6425, 0.8575, 1.0};
-    std::vector<float> R_ctrl = {0., 32., 237., 255., 0., 0.};
-    std::vector<float> G_ctrl = {7., 107., 255., 170., 2., 7.};
-    std::vector<float> B_ctrl = {100., 203., 255., 0., 0., 100.};
+    float t = static_cast<float>(iter) / static_cast<float>(m_iter);
 
-    m_interpolated_RGB.push_back(boost::math::barycentric_rational<float>(x_ctrl.data(), R_ctrl.data(), x_ctrl.size()));
-    m_interpolated_RGB.push_back(boost::math::barycentric_rational<float>(x_ctrl.data(), G_ctrl.data(), x_ctrl.size()));
-    m_interpolated_RGB.push_back(boost::math::barycentric_rational<float>(x_ctrl.data(), B_ctrl.data(), x_ctrl.size()));
+    float R_ratio = 9.0 * (1 - t) * pow(t, 3);
+    float G_ratio = 15.0 * (1 - pow(t, 2)) * pow(t, 2);
+    float B_ratio = 8.5 * (1 - pow(t, 3)) * t;
+
+    std::vector<uint8_t> RGB = {
+
+        static_cast<uint8_t>(R_ratio * 255.0),
+        static_cast<uint8_t>(G_ratio * 255.0),
+        static_cast<uint8_t>(B_ratio * 255.0)
+
+    };
+
+    return RGB;
 
 }
 
@@ -105,9 +105,7 @@ template<typename T> void mandelbrot_set<T>::bruteforce_compute(){
             point.set_im(map<T>(static_cast<T>(m_height), 0.0, m_vertices[1].get_im(), m_vertices[0].get_im(), static_cast<T>(i))); 
 
             uint32_t position = j + i * m_width;
-            
-            escape_data<T> point_escape = check_point<T>(point, m_iter);
-            m_points[position] = get_smooth_value(point_escape);
+            m_points[position] = check_point<T>(point, m_iter);
 
         }
 
@@ -149,14 +147,13 @@ template<typename T> std::unique_ptr<uint8_t[]> mandelbrot_set<T>::compute_pixel
             for (size_t j = 0; j < m_width; ++j) {
 
                 uint32_t position = j + i * m_width;
+                std::vector<uint8_t> RGB = generate_color(m_points[position]);
 
                 if (m_points[position] != m_iter) {
 
-                    float x_value = m_points[position] / m_iter;
-
                     for (uint8_t i = 0; i < 3; ++i) {
                         
-                        pixels[position * 3 + i] = floor(m_interpolated_RGB[i](x_value));
+                        pixels[position * 3 + i] = RGB[i];
 
                     }
 
