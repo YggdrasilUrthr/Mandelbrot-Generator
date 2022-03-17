@@ -115,6 +115,9 @@ int main(int argc, char ** argv){
     double x_pos;
     double y_pos;
 
+    uint32_t offset_x = static_cast<uint32_t>(params[0] / 10);
+    uint32_t offset_y = static_cast<uint32_t>(params[1] / 10);
+
     do {
 
         glClear(GL_COLOR_BUFFER_BIT);
@@ -126,10 +129,10 @@ int main(int argc, char ** argv){
         glPushMatrix();
         glBegin(GL_LINE_LOOP);
         glColor3f(1, 0, 0); 
-        glVertex2f(x_pos - 50, y_pos - 50);    
-        glVertex2f(x_pos - 50, y_pos + 50);
-        glVertex2f(x_pos + 50, y_pos + 50);
-        glVertex2f(x_pos + 50, y_pos - 50);       
+        glVertex2f(x_pos - offset_x, y_pos - offset_y);    
+        glVertex2f(x_pos - offset_x, y_pos + offset_y);
+        glVertex2f(x_pos + offset_x, y_pos + offset_y);
+        glVertex2f(x_pos + offset_x, y_pos - offset_y);       
         glEnd();
         glPopMatrix();
 

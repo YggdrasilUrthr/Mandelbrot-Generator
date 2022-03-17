@@ -79,8 +79,8 @@ template<typename T> std::vector<uint8_t> mandelbrot_set<T>::generate_color(uint
     float t = static_cast<float>(iter) / static_cast<float>(m_iter);
 
     float R_ratio = 9.0 * (1 - t) * pow(t, 3);
-    float G_ratio = 15.0 * (1 - pow(t, 2)) * pow(t, 2);
-    float B_ratio = 8.5 * (1 - pow(t, 3)) * t;
+    float G_ratio = 15.0 * pow((1 - t), 2) * pow(t, 2);
+    float B_ratio = 8.5 * pow((1 - t), 3) * t;
 
     std::vector<uint8_t> RGB = {
 

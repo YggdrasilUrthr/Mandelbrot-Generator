@@ -28,6 +28,12 @@ template<typename T> uint32_t check_point(const complex<T> &point, uint32_t max_
 
 };
 
+template<typename T> uint32_t check_point(const complex <T> &point, const complex<T> &ref_point, uint32_t max_iter) {
+
+    double delta = 
+
+}
+
 template<typename T> T map(T old_max, T old_min, T new_max, T new_min, T value) {
 
     return (value - old_min) * (new_max - new_min) / (old_max - old_min) + new_min;
