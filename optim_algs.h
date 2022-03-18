@@ -11,8 +11,6 @@ template<typename T> uint32_t check_point(const complex<T> &point, uint32_t max_
     complex<T> z(0.0, 0.0);
 
     for (int i = 0; i < max_iter; ++i) {
-    
-        //TODO Fix escape radius for BW render (same for bordetrace)
 
         if(z.get_mod() > 2) {  
 
@@ -28,9 +26,48 @@ template<typename T> uint32_t check_point(const complex<T> &point, uint32_t max_
 
 };
 
-template<typename T> uint32_t check_point(const complex <T> &point, const complex<T> &ref_point, uint32_t max_iter) {
+uint32_t check_point(complex<double> point, complex<double> center, std::vector<complex<double>> ref_iters) {
 
-    double delta = 
+    uint32_t max_iter = ref_iters.size();
+    
+    complex<double> z(0.0, 0.0);
+    complex<double> delta_0 = point - center;
+    complex<double> delta(0.0, 0.0);
+
+    for (size_t i = 0; i < max_iter; ++i) {
+        
+        if(z.get_mod() > 2) {
+
+            return i;
+
+        }
+
+        delta = delta * (ref_iters[i] + delta) + delta_0;
+        z = (ref_iters[i] / 2.0) + delta; 
+
+
+    }
+    
+    return max_iter;
+
+}
+
+template<typename T> std::vector<complex<double>> generate_iter_vector(const complex<T> center, uint32_t max_iter) {
+
+    std::vector<complex<double>> iter_vector;
+
+    complex<T> z(0.0, 0.0);
+
+    for (size_t i = 0; i < max_iter; ++i) {
+
+        z = z * z + center;
+
+        complex<double> z_double(static_cast<double>(2.0 * z.get_re()), static_cast<double>(2.0 * z.get_im())); 
+        iter_vector.push_back(z_double);
+
+    }
+
+    return iter_vector;
 
 }
 

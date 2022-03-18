@@ -77,6 +77,12 @@ public:
 
     }
 
+    complex<T> operator/(const T scalar) {
+
+        return complex<T>(m_re / scalar, m_im / scalar);
+
+    }
+
     bool operator==(const complex<T> &complex_2) {
         
         return (epsilon_compare(m_re, complex_2.m_re)) && (epsilon_compare(m_im, complex_2.m_im));

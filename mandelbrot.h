@@ -96,17 +96,49 @@ template<typename T> std::vector<uint8_t> mandelbrot_set<T>::generate_color(uint
 
 template<typename T> void mandelbrot_set<T>::bruteforce_compute(){
 
+    std::vector<complex<double>> ref_iters;
+    complex<T> center_arb(static_cast<T>(0.0), static_cast<T>(0.0));
+
+    if(m_optim_type == PERTURBATION) {
+
+        //center_arb.set_re(static_cast<T>(m_vertices[1].get_re() + m_vertices[0].get_re()) / 2.0);
+        //center_arb.set_im(static_cast<T>(m_vertices[1].get_im() + m_vertices[0].get_im()) / 2.0);
+
+        ref_iters = generate_iter_vector(center_arb, m_iter);
+
+    }
+
+    complex<double> center;
+    center.set_re(static_cast<double>(center_arb.get_re()));
+    center.set_im(static_cast<double>(center_arb.get_im()));
+
     for (size_t i = 0; i < m_height; ++i) {
         
         for (size_t j = 0; j < m_width; ++j) {
 
-            complex<T> point;
-            point.set_re(map<T>(static_cast<T>(m_width), 0.0, m_vertices[1].get_re(), m_vertices[0].get_re(), static_cast<T>(j)));
-            point.set_im(map<T>(static_cast<T>(m_height), 0.0, m_vertices[1].get_im(), m_vertices[0].get_im(), static_cast<T>(i))); 
-
             uint32_t position = j + i * m_width;
-            m_points[position] = check_point<T>(point, m_iter);
+            
+            if(m_optim_type == PERTURBATION) {
+                
+                complex<double> point;
 
+                point.set_re(map<double>(static_cast<double>(m_width), 0.0, static_cast<double>(m_vertices[1].get_re()), static_cast<double>(m_vertices[0].get_re()), static_cast<double>(j)));
+                point.set_im(map<double>(static_cast<double>(m_height), 0.0, static_cast<double>(m_vertices[1].get_im()), static_cast<double>(m_vertices[0].get_im()), static_cast<double>(i))); 
+
+                m_points[position] = check_point(point, center, ref_iters);
+
+            } else if (m_optim_type == NONE){
+
+                complex<T> point;
+
+                point.set_re(map<T>(static_cast<T>(m_width), 0.0, m_vertices[1].get_re(), m_vertices[0].get_re(), static_cast<T>(j)));
+                point.set_im(map<T>(static_cast<T>(m_height), 0.0, m_vertices[1].get_im(), m_vertices[0].get_im(), static_cast<T>(i))); 
+
+                m_points[position] = check_point<T>(point, m_iter);
+
+            }
+            
+        
         }
 
     }
@@ -117,7 +149,7 @@ template<typename T> std::unique_ptr<uint8_t[]> mandelbrot_set<T>::compute_pixel
 
     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 
-    if(m_optim_type == NONE) {
+    if(m_optim_type == NONE || m_optim_type == PERTURBATION) {
 
         bruteforce_compute();  
 

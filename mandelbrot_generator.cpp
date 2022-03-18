@@ -4,9 +4,13 @@
 #include "mandelbrot.h"
 
 static void mouse_button_callback(GLFWwindow * window, int button, int action, int mods) {
+    
+    if(action == GLFW_PRESS) {
 
-    double * data_ptr = static_cast<double *>(glfwGetWindowUserPointer(window));
-    glfwGetCursorPos(window, data_ptr, data_ptr + 1);
+        double * data_ptr = static_cast<double *>(glfwGetWindowUserPointer(window));
+        glfwGetCursorPos(window, data_ptr, data_ptr + 1);
+
+    }
 
 }
 
@@ -156,8 +160,8 @@ int main(int argc, char ** argv){
 
         }
 
-        glfwPollEvents();
         glfwSwapBuffers(window);
+        glfwWaitEvents();
 
     } while(glfwGetKey(window, GLFW_KEY_ESCAPE) != GLFW_PRESS && glfwWindowShouldClose(window) == 0);
 
