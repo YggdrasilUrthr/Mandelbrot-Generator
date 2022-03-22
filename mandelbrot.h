@@ -2,7 +2,7 @@
  * @ Author: Giorgio Chiurato
  * @ Create Time: 2022-03-17 15:02:29
  * @ Modified by: Giorgio Chiurato
- * @ Modified time: 2022-03-18 20:42:10
+ * @ Modified time: 2022-03-18 21:15:28
  * @ Description:
  */
 
@@ -11,6 +11,7 @@
 #include <iostream>
 #include <memory>
 #include <chrono>
+#include <thread>
 
 #include <GL/glew.h>
 #include <GL/gl.h>
@@ -55,6 +56,7 @@ template<typename T> class mandelbrot_set {
             
         ) : m_width(width), m_height(height), m_iter(iter), m_color_mode(color), m_optim_type(optim_type) {
 
+            m_frame_array = generate_frame_array();
             m_points = std::unique_ptr<uint32_t[]>(new uint32_t[m_width * m_height]);
             
             m_vertices.push_back(complex<T>(-2.0, -2.0));
@@ -70,15 +72,17 @@ template<typename T> class mandelbrot_set {
         uint32_t m_width;
         uint32_t m_height;
         uint32_t m_iter;
-        uint32_t m_max_iter_encountered = 0;
         color_mode m_color_mode;
         optimization_type m_optim_type;
+        uint8_t m_thread_number = 1;
 
+        std::vector<std::unique_ptr<uint32_t[]>> m_frame_array;
         std::unique_ptr<uint32_t[]> m_points;
         std::vector<complex<T>> m_vertices;
 
-        void bruteforce_compute();
+        void bruteforce_compute(std::unique_ptr<uint32_t[]> pixel_array);
         std::vector<uint8_t> generate_color(uint32_t iter);
+        std::vector<std::unique_ptr<uint32_t[]>> generate_frame_array();
 
 };
 
@@ -102,10 +106,34 @@ template<typename T> std::vector<uint8_t> mandelbrot_set<T>::generate_color(uint
 
 }
 
-template<typename T> void mandelbrot_set<T>::bruteforce_compute(){
+
+template<typename T> std::vector<std::unique_ptr<uint32_t[]>> mandelbrot_set<T>::generate_frame_array() {
+
+    uint32_t total_pixels = m_width * m_height;
+    uint32_t pixels_per_frame = total_pixels / m_thread_number;
+
+    //TODO account for uneven division (leftover pixels)
+
+    std::vector<std::unique_ptr<uint32_t[]>> frame_array;
+
+    for (size_t i = 0; i < m_thread_number; ++i) {
+        
+        frame_array.push_back(std::unique_ptr<uint32_t[]>(new uint32_t[pixels_per_frame]));
+
+    }
+    
+    return frame_array;
+
+}
+
+template<typename T> void mandelbrot_set<T>::bruteforce_compute(std::unique_ptr<uint32_t[]> pixel_array){
 
     std::vector<complex<double>> ref_iters;
     complex<T> center_arb(static_cast<T>(0.0), static_cast<T>(0.0));
+
+    std::vector<std::unique_ptr<uint32_t[]>> frames;
+
+    
 
     if(m_optim_type == PERTURBATION) {
 
@@ -133,7 +161,7 @@ template<typename T> void mandelbrot_set<T>::bruteforce_compute(){
                 point.set_re(map<double>(static_cast<double>(m_width), 0.0, static_cast<double>(m_vertices[1].get_re()), static_cast<double>(m_vertices[0].get_re()), static_cast<double>(j)));
                 point.set_im(map<double>(static_cast<double>(m_height), 0.0, static_cast<double>(m_vertices[1].get_im()), static_cast<double>(m_vertices[0].get_im()), static_cast<double>(i))); 
 
-                m_points[position] = check_point(point, center, ref_iters);
+                pixel_array[position] = check_point(point, center, ref_iters);
 
             } else if (m_optim_type == NONE){
 
@@ -142,7 +170,7 @@ template<typename T> void mandelbrot_set<T>::bruteforce_compute(){
                 point.set_re(map<T>(static_cast<T>(m_width), 0.0, m_vertices[1].get_re(), m_vertices[0].get_re(), static_cast<T>(j)));
                 point.set_im(map<T>(static_cast<T>(m_height), 0.0, m_vertices[1].get_im(), m_vertices[0].get_im(), static_cast<T>(i))); 
 
-                m_points[position] = check_point<T>(point, m_iter);
+                pixel_array[position] = check_point<T>(point, m_iter);
 
             }
             
@@ -159,7 +187,11 @@ template<typename T> std::unique_ptr<uint8_t[]> mandelbrot_set<T>::compute_pixel
 
     if(m_optim_type == NONE || m_optim_type == PERTURBATION) {
 
-        bruteforce_compute();  
+        for(size_t i = 0; i < m_frame_array.size(); ++i){
+            
+            bruteforce_compute(m_frame_array[i]);  
+
+        }
 
     } else if(m_optim_type == BORDER_TRACE) {
 
