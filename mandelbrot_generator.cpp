@@ -24,18 +24,19 @@ static void mouse_button_callback(GLFWwindow * window, int button, int action, i
 
 int main(int argc, char ** argv){
 
-    uint32_t params[6] = {
+    uint32_t params[7] = {
         
         DEFAULT_WIDTH, 
         DEFAULT_HEIGHT, 
         DEFAULT_ITER, 
         mandelbrot_set<double>::color_mode::BOOLEAN,
         mandelbrot_set<double>::optimization_type::NONE,
+        0,
         0
 
     };
 
-    if (argc > 1 && argc <= 7) {
+    if (argc > 1 && argc <= 8) {
         
         for(size_t i = 1; i < argc; ++i) {
 
@@ -91,7 +92,8 @@ int main(int argc, char ** argv){
         
         params[0], params[1], params[2], 
         mandelbrot_set<double>::color_mode(params[3]), 
-        mandelbrot_set<double>::optimization_type(params[4])
+        mandelbrot_set<double>::optimization_type(params[4]),
+        params[6]
         
     );
 
@@ -99,7 +101,8 @@ int main(int argc, char ** argv){
         
         params[0], params[1], params[2], 
         mandelbrot_set<boost::multiprecision::mpfr_float>::color_mode(params[3]), 
-        mandelbrot_set<boost::multiprecision::mpfr_float>::optimization_type(params[4])
+        mandelbrot_set<boost::multiprecision::mpfr_float>::optimization_type(params[4]),
+        params[6]
         
     );
 

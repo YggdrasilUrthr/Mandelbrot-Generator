@@ -14,7 +14,50 @@
 
 #pragma once
 
-template<typename T> uint32_t check_point(const complex<T> &point, uint32_t max_iter) {
+template<typename T> struct frame_data {
+
+    frame_data(
+        
+        uint32_t width, 
+        uint32_t height, 
+        complex<T> bottom_left, 
+        complex<T> upper_right,
+        uint32_t y,
+        uint32_t x
+        
+    ) {
+
+        m_size.push_back(width);
+        m_size.push_back(height);
+        m_vertices.push_back(bottom_left);
+        m_vertices.push_back(upper_right);
+        m_idx.push_back(y);
+        m_idx.push_back(x);
+
+        m_pixel_data = std::unique_ptr<uint32_t[]>(new uint32_t[m_size[0] * m_size[1]]);
+
+    };
+
+    frame_data(
+
+        std::vector<uint32_t> size,
+        std::vector<complex<T>> vertices,
+        std::vector<uint32_t> idx
+
+    ) : m_size(size), m_vertices(vertices), m_idx(idx) {
+
+        m_pixel_data = std::unique_ptr<uint32_t[]>(new uint32_t[m_size[0] * m_size[1]]);
+
+    };
+
+    std::vector<uint32_t> m_size;
+    std::vector<complex<T>> m_vertices;
+    std::unique_ptr<uint32_t[]> m_pixel_data;
+    std::vector<uint32_t> m_idx;
+
+};
+
+template<typename T> uint32_t check_point(complex<T> point, uint32_t max_iter) {
 
     complex<T> z(0.0, 0.0);
 
@@ -105,8 +148,6 @@ template<typename T> void check_neighbours(
     size_t current_index,
     uint32_t width,
     uint32_t height,
-    T step_re,
-    T step_im, 
     uint32_t max_iter, 
     std::vector<complex<T>> vertices,
     std::queue<size_t>& pixel_queue,
@@ -124,7 +165,7 @@ template<typename T> void check_neighbours(
 
     } else {
 
-        current_iter =  check_point(current_point, max_iter);
+        current_iter = check_point(current_point, max_iter);
 
     }
 
@@ -226,24 +267,18 @@ void color_all(
 
 }
 
-template<typename T> std::unique_ptr<uint32_t[]> border_trace(    
-    
-    std::vector<complex<T>> vertices,
-    uint32_t width,
-    uint32_t height,
-    T step_re, 
-    T step_im, 
-    uint32_t max_iter
-    
-) {
+template<typename T> void border_trace(frame_data<T> &frame, uint32_t max_iter) {
 
     /* The frame is completely descriped by two opposite vertices (represented by their relative complex points). 
     ** Here the bottom-left and upper right are chosen, encoded in a vector as follows:
     ** {[0]: bottom-left, [1]: upper_right}
     */
 
-    std::queue<size_t> pixel_queue;
+    uint32_t width = frame.m_size[0];
+    uint32_t height = frame.m_size[1];
+    std::vector<complex<T>> vertices = frame.m_vertices;
 
+    std::queue<size_t> pixel_queue;
     std::unique_ptr<uint32_t[]> computed_iters(new uint32_t[width * height]);
 
     for (size_t i = 0; i < height; ++i) {
@@ -275,14 +310,13 @@ template<typename T> std::unique_ptr<uint32_t[]> border_trace(
 
     while (!pixel_queue.empty()) {
         
-        check_neighbours(pixel_queue.front(), width, height, step_re, step_im, max_iter, vertices, pixel_queue, computed_iters);
+        check_neighbours(pixel_queue.front(), width, height, max_iter, vertices, std::ref(pixel_queue), std::ref(computed_iters));
         pixel_queue.pop();
 
     }
 
-    color_all(width, height, max_iter, computed_iters);
-
-    return computed_iters;
+    color_all(width, height, max_iter, std::ref(computed_iters));
+    frame.m_pixel_data = std::move(computed_iters);
 
 }
 

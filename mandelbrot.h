@@ -25,49 +25,6 @@
 #define DEFAULT_HEIGHT 600
 #define DEFAULT_ITER 100
 
-template<typename T> struct frame_data {
-
-    frame_data(
-        
-        uint32_t width, 
-        uint32_t height, 
-        complex<T> bottom_left, 
-        complex<T> upper_right,
-        uint32_t y,
-        uint32_t x
-        
-    ) {
-
-        m_size.push_back(width);
-        m_size.push_back(height);
-        m_vertices.push_back(bottom_left);
-        m_vertices.push_back(upper_right);
-        m_idx.push_back(y);
-        m_idx.push_back(x);
-
-        m_pixel_data = std::unique_ptr<uint32_t[]>(new uint32_t[m_size[0] * m_size[1]]);
-
-    };
-
-    frame_data(
-
-        std::vector<uint32_t> size,
-        std::vector<complex<T>> vertices,
-        std::vector<uint32_t> idx
-
-    ) : m_size(size), m_vertices(vertices), m_idx(idx) {
-
-        m_pixel_data = std::unique_ptr<uint32_t[]>(new uint32_t[m_size[0] * m_size[1]]);
-
-    };
-
-    std::vector<uint32_t> m_size;
-    std::vector<complex<T>> m_vertices;
-    std::unique_ptr<uint32_t[]> m_pixel_data;
-    std::vector<uint32_t> m_idx;
-
-};
-
 template<typename T> class mandelbrot_set {
 
     public:
@@ -95,9 +52,10 @@ template<typename T> class mandelbrot_set {
             uint32_t height = DEFAULT_HEIGHT, 
             uint32_t iter = DEFAULT_ITER, 
             color_mode color = BOOLEAN,
-            optimization_type optim_type = NONE 
+            optimization_type optim_type = NONE,
+            uint32_t thread_number = 1
             
-        ) : m_width(width), m_height(height), m_iter(iter), m_color_mode(color), m_optim_type(optim_type) {
+        ) : m_width(width), m_height(height), m_iter(iter), m_color_mode(color), m_optim_type(optim_type), m_thread_number(thread_number) {
 
             m_points = std::unique_ptr<uint32_t[]>(new uint32_t[m_width * m_height]);
             
@@ -116,7 +74,7 @@ template<typename T> class mandelbrot_set {
         uint32_t m_iter;
         color_mode m_color_mode;
         optimization_type m_optim_type;
-        uint8_t m_thread_number = 4;
+        uint8_t m_thread_number;
 
         std::vector<frame_data<T>> m_frame_array;
         std::unique_ptr<uint32_t[]> m_points;
@@ -126,6 +84,7 @@ template<typename T> class mandelbrot_set {
         std::vector<uint8_t> generate_color(uint32_t iter);
         std::vector<frame_data<T>> generate_frame_array();
         std::unique_ptr<uint32_t[]> join_pixel_arrays(std::vector<frame_data<T>> &frame_array);
+        uint32_t thread_subdivide(uint32_t value);
 
 };
 
@@ -175,24 +134,29 @@ template<typename T> std::vector<uint8_t> mandelbrot_set<T>::generate_color(uint
 
 }
 
+template<typename T> uint32_t mandelbrot_set<T>::thread_subdivide(uint32_t value) {
+
+    if(value == 1 || value == 0) {
+        
+        return 1;
+
+    } else if(value == 2) {
+
+        return 2;
+
+    } else {
+
+        return value / 2;
+
+    }
+        
+}
+
 template<typename T> std::vector<frame_data<T>> mandelbrot_set<T>::generate_frame_array() {
 
-    //TODO fix this
-
-    uint32_t vert_frames = 2;
-    uint32_t hor_frames = 2;
-
-    /*if(m_thread_number > 4) {
-        
-        vert_frames = m_thread_number / 2;
-
-        if(m_thread_number > 2) {
-            
-            hor_frames = m_thread_number / 4;
-
-        } else 
-
-    }*/
+    uint32_t vert_frames = thread_subdivide(m_thread_number);
+    uint32_t hor_frames = thread_subdivide(m_thread_number / vert_frames);
+    
 
     std::vector<frame_data<T>> frame_array;
 
@@ -315,35 +279,27 @@ template<typename T> std::unique_ptr<uint8_t[]> mandelbrot_set<T>::compute_pixel
 
     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 
-    if(m_optim_type == NONE || m_optim_type == PERTURBATION) {
+    for(size_t i = 0; i < m_frame_array.size(); ++i){
 
-        for(size_t i = 0; i < m_frame_array.size(); ++i){
-            
+        if(m_optim_type == NONE || m_optim_type == PERTURBATION) {
+
             threads.push_back(std::thread(&mandelbrot_set<T>::bruteforce_compute, this, std::ref(m_frame_array[i])));  
 
-        }
+        } else if(m_optim_type == BORDER_TRACE) {
 
-        for(auto &thread : threads) {
-
-            thread.join();
+            threads.push_back(std::thread(border_trace<T>, std::ref(m_frame_array[i]), m_iter));
 
         }
-
-        m_points = std::move(join_pixel_arrays(m_frame_array));
-
-    } else if(m_optim_type == BORDER_TRACE) {
-
-        // CHANGE THESE NAMES
-
-        T width = m_vertices[1].get_re() - m_vertices[0].get_re();
-        T height = m_vertices[1].get_im() - m_vertices[0].get_im();
-
-        T re_delta = static_cast<T>(width) / m_width;
-        T im_delta =  static_cast<T>(height) / m_height;
-
-        m_points = border_trace<T>(m_vertices, m_width, m_height, re_delta, im_delta, m_iter);
 
     }
+
+    for(auto &thread : threads) {
+
+        thread.join();
+
+    }
+
+    m_points = std::move(join_pixel_arrays(m_frame_array));
     
     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
     std::cout << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[µs]" << std::endl;
