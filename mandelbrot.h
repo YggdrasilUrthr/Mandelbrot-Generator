@@ -25,6 +25,49 @@
 #define DEFAULT_HEIGHT 600
 #define DEFAULT_ITER 100
 
+template<typename T> struct frame_data {
+
+    frame_data(
+        
+        uint32_t width, 
+        uint32_t height, 
+        complex<T> bottom_left, 
+        complex<T> upper_right,
+        uint32_t y,
+        uint32_t x
+        
+    ) {
+
+        m_size.push_back(width);
+        m_size.push_back(height);
+        m_vertices.push_back(bottom_left);
+        m_vertices.push_back(upper_right);
+        m_idx.push_back(y);
+        m_idx.push_back(x);
+
+        m_pixel_data = std::unique_ptr<uint32_t[]>(new uint32_t[m_size[0] * m_size[1]]);
+
+    };
+
+    frame_data(
+
+        std::vector<uint32_t> size,
+        std::vector<complex<T>> vertices,
+        std::vector<uint32_t> idx
+
+    ) : m_size(size), m_vertices(vertices), m_idx(idx) {
+
+        m_pixel_data = std::unique_ptr<uint32_t[]>(new uint32_t[m_size[0] * m_size[1]]);
+
+    };
+
+    std::vector<uint32_t> m_size;
+    std::vector<complex<T>> m_vertices;
+    std::unique_ptr<uint32_t[]> m_pixel_data;
+    std::vector<uint32_t> m_idx;
+
+};
+
 template<typename T> class mandelbrot_set {
 
     public:
@@ -56,7 +99,6 @@ template<typename T> class mandelbrot_set {
             
         ) : m_width(width), m_height(height), m_iter(iter), m_color_mode(color), m_optim_type(optim_type) {
 
-            m_frame_array = generate_frame_array();
             m_points = std::unique_ptr<uint32_t[]>(new uint32_t[m_width * m_height]);
             
             m_vertices.push_back(complex<T>(-2.0, -2.0));
@@ -74,17 +116,44 @@ template<typename T> class mandelbrot_set {
         uint32_t m_iter;
         color_mode m_color_mode;
         optimization_type m_optim_type;
-        uint8_t m_thread_number = 1;
+        uint8_t m_thread_number = 4;
 
-        std::vector<std::unique_ptr<uint32_t[]>> m_frame_array;
+        std::vector<frame_data<T>> m_frame_array;
         std::unique_ptr<uint32_t[]> m_points;
         std::vector<complex<T>> m_vertices;
 
-        void bruteforce_compute(std::unique_ptr<uint32_t[]> pixel_array);
+        void bruteforce_compute(frame_data<T> &frame);
         std::vector<uint8_t> generate_color(uint32_t iter);
-        std::vector<std::unique_ptr<uint32_t[]>> generate_frame_array();
+        std::vector<frame_data<T>> generate_frame_array();
+        std::unique_ptr<uint32_t[]> join_pixel_arrays(std::vector<frame_data<T>> &frame_array);
 
 };
+
+template<typename T> std::unique_ptr<uint32_t[]> mandelbrot_set<T>::join_pixel_arrays(std::vector<frame_data<T>> &frame_array) {
+
+    std::unique_ptr<uint32_t[]> pixel_array = std::unique_ptr<uint32_t[]>(new uint32_t[m_width * m_height]);
+
+    for (size_t k = 0; k < frame_array.size(); ++k) {
+
+        for (size_t i = 0; i < frame_array[k].m_size[1]; ++i) {
+
+            for (size_t j = 0; j < frame_array[k].m_size[0]; ++j) {
+
+                uint32_t x_idx = frame_array[k].m_size[0] * frame_array[k].m_idx[1] + j;
+                uint32_t y_idx = frame_array[k].m_size[1] * frame_array[k].m_idx[0] + i;
+                uint32_t complete_idx = x_idx + y_idx * m_width;
+
+                pixel_array[complete_idx] = frame_array[k].m_pixel_data[j + i * frame_array[k].m_size[0]];
+            
+            }
+            
+        }
+
+    }
+
+    return pixel_array;
+
+}
 
 template<typename T> std::vector<uint8_t> mandelbrot_set<T>::generate_color(uint32_t iter) {
 
@@ -106,19 +175,65 @@ template<typename T> std::vector<uint8_t> mandelbrot_set<T>::generate_color(uint
 
 }
 
+template<typename T> std::vector<frame_data<T>> mandelbrot_set<T>::generate_frame_array() {
 
-template<typename T> std::vector<std::unique_ptr<uint32_t[]>> mandelbrot_set<T>::generate_frame_array() {
+    //TODO fix this
 
-    uint32_t total_pixels = m_width * m_height;
-    uint32_t pixels_per_frame = total_pixels / m_thread_number;
+    uint32_t vert_frames = 2;
+    uint32_t hor_frames = 2;
 
-    //TODO account for uneven division (leftover pixels)
-
-    std::vector<std::unique_ptr<uint32_t[]>> frame_array;
-
-    for (size_t i = 0; i < m_thread_number; ++i) {
+    /*if(m_thread_number > 4) {
         
-        frame_array.push_back(std::unique_ptr<uint32_t[]>(new uint32_t[pixels_per_frame]));
+        vert_frames = m_thread_number / 2;
+
+        if(m_thread_number > 2) {
+            
+            hor_frames = m_thread_number / 4;
+
+        } else 
+
+    }*/
+
+    std::vector<frame_data<T>> frame_array;
+
+    for(uint32_t i = 0; i < vert_frames; ++i) {
+
+        for (uint32_t j = 0; j < hor_frames; ++j) {
+        
+            std::vector<uint32_t> current_size = {
+
+                m_width / hor_frames,
+                m_height / vert_frames
+
+            };
+
+            complex<T> bottom_left(
+
+                map<T>(static_cast<T>(m_width), 0.0, m_vertices[1].get_re(), m_vertices[0].get_re(), static_cast<T>(j * current_size[0])),
+                map<T>(static_cast<T>(m_height), 0.0, m_vertices[1].get_im(), m_vertices[0].get_im(), static_cast<T>(i * current_size[1])) 
+
+
+            );
+
+            complex<T> upper_right(
+
+                map<T>(static_cast<T>(m_width), 0.0, m_vertices[1].get_re(), m_vertices[0].get_re(), static_cast<T>((j + 1) * current_size[0])),
+                map<T>(static_cast<T>(m_height), 0.0, m_vertices[1].get_im(), m_vertices[0].get_im(), static_cast<T>((i + 1) * current_size[1])) 
+
+            );
+
+            std::vector<complex<T>> current_vertices = {
+
+                bottom_left,
+                upper_right
+
+            };
+
+            std::vector<uint32_t> idx = {i, j};
+
+            frame_array.push_back(frame_data<T>(current_size, current_vertices, idx));
+
+        }
 
     }
     
@@ -126,14 +241,10 @@ template<typename T> std::vector<std::unique_ptr<uint32_t[]>> mandelbrot_set<T>:
 
 }
 
-template<typename T> void mandelbrot_set<T>::bruteforce_compute(std::unique_ptr<uint32_t[]> pixel_array){
+template<typename T> void mandelbrot_set<T>::bruteforce_compute(frame_data<T> &frame) {
 
     std::vector<complex<double>> ref_iters;
     complex<T> center_arb(static_cast<T>(0.0), static_cast<T>(0.0));
-
-    std::vector<std::unique_ptr<uint32_t[]>> frames;
-
-    
 
     if(m_optim_type == PERTURBATION) {
 
@@ -148,11 +259,11 @@ template<typename T> void mandelbrot_set<T>::bruteforce_compute(std::unique_ptr<
     center.set_re(static_cast<double>(center_arb.get_re()));
     center.set_im(static_cast<double>(center_arb.get_im()));
 
-    for (size_t i = 0; i < m_height; ++i) {
+    for (size_t i = 0; i < frame.m_size[1]; ++i) {
         
-        for (size_t j = 0; j < m_width; ++j) {
+        for (size_t j = 0; j < frame.m_size[0]; ++j) {
 
-            uint32_t position = j + i * m_width;
+            uint32_t position = j + i * frame.m_size[0];
             
             if(m_optim_type == PERTURBATION) {
                 
@@ -161,16 +272,32 @@ template<typename T> void mandelbrot_set<T>::bruteforce_compute(std::unique_ptr<
                 point.set_re(map<double>(static_cast<double>(m_width), 0.0, static_cast<double>(m_vertices[1].get_re()), static_cast<double>(m_vertices[0].get_re()), static_cast<double>(j)));
                 point.set_im(map<double>(static_cast<double>(m_height), 0.0, static_cast<double>(m_vertices[1].get_im()), static_cast<double>(m_vertices[0].get_im()), static_cast<double>(i))); 
 
-                pixel_array[position] = check_point(point, center, ref_iters);
+                frame.m_pixel_data[position] = check_point(point, center, ref_iters);
 
             } else if (m_optim_type == NONE){
 
                 complex<T> point;
 
-                point.set_re(map<T>(static_cast<T>(m_width), 0.0, m_vertices[1].get_re(), m_vertices[0].get_re(), static_cast<T>(j)));
-                point.set_im(map<T>(static_cast<T>(m_height), 0.0, m_vertices[1].get_im(), m_vertices[0].get_im(), static_cast<T>(i))); 
+                point.set_re(map<T>(
+                    
+                    static_cast<T>(frame.m_size[0]), 
+                    0.0, 
+                    frame.m_vertices[1].get_re(), 
+                    frame.m_vertices[0].get_re(), 
+                    static_cast<T>(j)
+                    
+                ));
+                point.set_im(map<T>(
+                    
+                    static_cast<T>(frame.m_size[1]),
+                    0.0, 
+                    frame.m_vertices[1].get_im(), 
+                    frame.m_vertices[0].get_im(), 
+                    static_cast<T>(i)
+                    
+                )); 
 
-                pixel_array[position] = check_point<T>(point, m_iter);
+                frame.m_pixel_data[position] = check_point<T>(point, m_iter);
 
             }
             
@@ -183,15 +310,26 @@ template<typename T> void mandelbrot_set<T>::bruteforce_compute(std::unique_ptr<
 
 template<typename T> std::unique_ptr<uint8_t[]> mandelbrot_set<T>::compute_pixels() {
 
+    m_frame_array = generate_frame_array();
+    std::vector<std::thread> threads;
+
     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 
     if(m_optim_type == NONE || m_optim_type == PERTURBATION) {
 
         for(size_t i = 0; i < m_frame_array.size(); ++i){
             
-            bruteforce_compute(m_frame_array[i]);  
+            threads.push_back(std::thread(&mandelbrot_set<T>::bruteforce_compute, this, std::ref(m_frame_array[i])));  
 
         }
+
+        for(auto &thread : threads) {
+
+            thread.join();
+
+        }
+
+        m_points = std::move(join_pixel_arrays(m_frame_array));
 
     } else if(m_optim_type == BORDER_TRACE) {
 
