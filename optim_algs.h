@@ -166,6 +166,7 @@ template<typename T> void check_neighbours(
     } else {
 
         current_iter = check_point(current_point, max_iter);
+        computed_iters[current_index] = current_iter;
 
     }
 
@@ -174,12 +175,15 @@ template<typename T> void check_neighbours(
     ** {[0]: right, [1]: left, [2]: up, [3]: down}
     */
 
+   uint32_t x_idx = current_index % width;
+   uint32_t y_idx = (current_index - x_idx) / width; 
+
     bool border_existence[] = {
 
-        vertices[1].get_re() > current_point.get_re(),
-        vertices[0].get_re() < current_point.get_re(),
-        vertices[1].get_im() > current_point.get_im(),
-        vertices[0].get_im() < current_point.get_im()
+        x_idx < width - 1,
+        x_idx > 0,
+        y_idx < height - 1,
+        y_idx > 0
 
     }; 
 
@@ -188,7 +192,7 @@ template<typename T> void check_neighbours(
     ** {[0]: right, [1]: left, [2]: up, [3]: down}
     */
 
-    long offsets[] = {1, -1, width, - width};
+    long offsets[] = {1, -1, width, -width};
 
     /* Check if the four pixels along the main axis (if they exist and have not been already checked) are border points, in which
     ** case they are added to the output point list.
