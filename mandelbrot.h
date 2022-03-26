@@ -73,6 +73,8 @@ template<typename T> class mandelbrot_set {
 
         uint32_t m_width;
         uint32_t m_height;
+        double m_x_pos;
+        double m_y_pos;
         uint32_t m_iter;
         color_mode m_color_mode;
         optimization_type m_optim_type;
@@ -83,7 +85,6 @@ template<typename T> class mandelbrot_set {
         std::unique_ptr<uint32_t[]> m_points;
         std::vector<complex<T>> m_vertices;
         complex<T> m_center;
-        complex<double> m_center_double;
         std::vector<complex<double>> m_ref_iters;
 
         void bruteforce_compute(frame_data<T> &frame);
@@ -93,8 +94,38 @@ template<typename T> class mandelbrot_set {
         std::vector<frame_data<T>> generate_frame_array();
         std::unique_ptr<uint32_t[]> join_pixel_arrays(std::vector<frame_data<T>> &frame_array);
         uint32_t thread_subdivide(uint32_t value);
+        void find_center();
 
 };
+
+template<typename T> void mandelbrot_set<T>::find_center() {
+
+    //TODO adjust externally zoom factor
+
+    std::list<uint32_t> j_values;
+    std::list<uint32_t> i_values;
+
+    uint32_t x_offset = (m_width / 10) / 2;
+    uint32_t y_offset = (m_height / 10) / 2;
+
+    uint32_t j_min = ((m_x_pos - x_offset) > 0 ? m_x_pos - x_offset : 0);
+    uint32_t i_min = ((m_height - m_y_pos - y_offset) > 0 ? m_height - m_y_pos - y_offset : 0);
+    uint32_t j_max = ((m_x_pos + x_offset) < m_width ? m_x_pos + x_offset : m_width);
+    uint32_t i_max = ((m_height - m_y_pos + y_offset) < m_height ? m_height - m_y_pos + y_offset : m_height);
+
+    for (size_t i = i_min; i < i_max; ++i) {
+        
+        i_values.push_back(i);
+
+    }
+
+    for (size_t j = j_min; j < j_max; ++j) {
+
+        j_values.push_back(j);
+
+    }
+
+}
 
 template<typename T> void mandelbrot_set<T>::generate_optim_array() {
 
@@ -386,7 +417,8 @@ template<typename T> std::unique_ptr<uint8_t[]> mandelbrot_set<T>::compute_pixel
 
 template<typename T> void mandelbrot_set<T>::update_vertices(double x_pos, double y_pos) {
 
-    //Maybe save this?? (used in border-trace)
+    m_x_pos = x_pos;
+    m_y_pos = y_pos;
 
     T width = m_vertices[1].get_re() - m_vertices[0].get_re();
     T height = m_vertices[1].get_im() - m_vertices[0].get_im();
