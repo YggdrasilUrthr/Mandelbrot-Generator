@@ -54,6 +54,8 @@ template<typename T> struct frame_data {
     std::vector<complex<T>> m_vertices;
     std::unique_ptr<uint32_t[]> m_pixel_data;
     std::vector<uint32_t> m_idx;
+    std::vector<uint32_t> m_ref_iters;
+    complex<T> m_center;
 
 };
 
@@ -141,8 +143,6 @@ template<typename T> complex<T> get_point_from_index(std::vector<complex<T>> ver
 
 }
 
-//TODO change names for size_t
-
 template<typename T> void check_neighbours(
     
     size_t current_index,
@@ -151,7 +151,8 @@ template<typename T> void check_neighbours(
     uint32_t max_iter, 
     std::vector<complex<T>> vertices,
     std::queue<size_t>& pixel_queue,
-    std::unique_ptr<uint32_t[]>& computed_iters
+    std::unique_ptr<uint32_t[]>& computed_iters,
+    std::function<uint32_t(complex<T>)> check_point_optim
 
 ) {
 
@@ -165,7 +166,7 @@ template<typename T> void check_neighbours(
 
     } else {
 
-        current_iter = check_point(current_point, max_iter);
+        current_iter = check_point_optim(current_point);
         computed_iters[current_index] = current_iter;
 
     }
@@ -205,7 +206,7 @@ template<typename T> void check_neighbours(
 
         if(border_existence[i] && computed_iters[point_index] == max_iter + 1) {
             
-            uint32_t neighbor_iter = check_point(point_to_check, max_iter);
+            uint32_t neighbor_iter = check_point_optim(point_to_check);
             
             if(neighbor_iter != current_iter) {
             
@@ -232,7 +233,7 @@ template<typename T> void check_neighbours(
 
             if (border_existence[i] && border_existence[j] && computed_iters[point_index] == max_iter + 1) {
     
-                uint32_t neighbor_iter = check_point(point_to_check, max_iter);
+                uint32_t neighbor_iter = check_point_optim(point_to_check);
 
                 if(neighbor_iter != current_iter) {
             
@@ -271,56 +272,4 @@ void color_all(
 
 }
 
-template<typename T> void border_trace(frame_data<T> &frame, uint32_t max_iter) {
-
-    /* The frame is completely descriped by two opposite vertices (represented by their relative complex points). 
-    ** Here the bottom-left and upper right are chosen, encoded in a vector as follows:
-    ** {[0]: bottom-left, [1]: upper_right}
-    */
-
-    uint32_t width = frame.m_size[0];
-    uint32_t height = frame.m_size[1];
-    std::vector<complex<T>> vertices = frame.m_vertices;
-
-    std::queue<size_t> pixel_queue;
-    std::unique_ptr<uint32_t[]> computed_iters(new uint32_t[width * height]);
-
-    for (size_t i = 0; i < height; ++i) {
-            
-        for (size_t j = 0; j < width; ++j) {
-    
-            uint32_t position = j + i * width;  
-            computed_iters[position] = max_iter + 1;
-
-        }
-
-    }
-
-    //Add image edges to pixel queue
-
-    for (size_t i = 0; i < width; ++i) {
-
-        pixel_queue.push(i);
-        pixel_queue.push((height - 1) * width + i);
-
-    }
-    
-    for (size_t i = 0; i < height; ++i) {
-        
-        pixel_queue.push(i * width);
-        pixel_queue.push(width - 1 + i * width);   
-
-    }
-
-    while (!pixel_queue.empty()) {
-        
-        check_neighbours(pixel_queue.front(), width, height, max_iter, vertices, std::ref(pixel_queue), std::ref(computed_iters));
-        pixel_queue.pop();
-
-    }
-
-    color_all(width, height, max_iter, std::ref(computed_iters));
-    frame.m_pixel_data = std::move(computed_iters);
-
-}
 

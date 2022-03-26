@@ -62,6 +62,8 @@ template<typename T> class mandelbrot_set {
             m_vertices.push_back(complex<T>(-2.0, -2.0));
             m_vertices.push_back(complex<T>(2.0, 2.0));
 
+            generate_optim_array();
+
         };
 
         std::unique_ptr<uint8_t[]> compute_pixels();
@@ -74,19 +76,38 @@ template<typename T> class mandelbrot_set {
         uint32_t m_iter;
         color_mode m_color_mode;
         optimization_type m_optim_type;
+        std::vector<bool> m_optim_vector = {0, 0, 0};
         uint8_t m_thread_number;
 
         std::vector<frame_data<T>> m_frame_array;
         std::unique_ptr<uint32_t[]> m_points;
         std::vector<complex<T>> m_vertices;
+        complex<double> m_center;
+        std::vector<complex<double>> m_ref_iters;
 
         void bruteforce_compute(frame_data<T> &frame);
+        void border_trace(frame_data<T> &frame);
+        void generate_optim_array();
         std::vector<uint8_t> generate_color(uint32_t iter);
         std::vector<frame_data<T>> generate_frame_array();
         std::unique_ptr<uint32_t[]> join_pixel_arrays(std::vector<frame_data<T>> &frame_array);
         uint32_t thread_subdivide(uint32_t value);
 
 };
+
+template<typename T> void mandelbrot_set<T>::generate_optim_array() {
+
+    if(m_optim_type == NONE) {
+        
+        return;
+
+    }
+
+    m_optim_vector[0] = (m_optim_type & 0b0001);
+    m_optim_vector[1] = (m_optim_type & 0b0010) >> 1;
+    m_optim_vector[2] = (m_optim_type & 0b0100) >> 2;
+
+}
 
 template<typename T> std::unique_ptr<uint32_t[]> mandelbrot_set<T>::join_pixel_arrays(std::vector<frame_data<T>> &frame_array) {
 
@@ -207,38 +228,41 @@ template<typename T> std::vector<frame_data<T>> mandelbrot_set<T>::generate_fram
 
 template<typename T> void mandelbrot_set<T>::bruteforce_compute(frame_data<T> &frame) {
 
-    std::vector<complex<double>> ref_iters;
-    complex<T> center_arb(static_cast<T>(0.0), static_cast<T>(0.0));
-
-    if(m_optim_type == PERTURBATION) {
-
-        //center_arb.set_re(static_cast<T>(m_vertices[1].get_re() + m_vertices[0].get_re()) / 2.0);
-        //center_arb.set_im(static_cast<T>(m_vertices[1].get_im() + m_vertices[0].get_im()) / 2.0);
-
-        ref_iters = generate_iter_vector(center_arb, m_iter);
-
-    }
-
-    complex<double> center;
-    center.set_re(static_cast<double>(center_arb.get_re()));
-    center.set_im(static_cast<double>(center_arb.get_im()));
-
     for (size_t i = 0; i < frame.m_size[1]; ++i) {
         
         for (size_t j = 0; j < frame.m_size[0]; ++j) {
 
             uint32_t position = j + i * frame.m_size[0];
             
-            if(m_optim_type == PERTURBATION) {
+            //TODO clean this up (see check_neigbhours)
+
+            if(m_optim_vector[2]) {
                 
                 complex<double> point;
 
-                point.set_re(map<double>(static_cast<double>(m_width), 0.0, static_cast<double>(m_vertices[1].get_re()), static_cast<double>(m_vertices[0].get_re()), static_cast<double>(j)));
-                point.set_im(map<double>(static_cast<double>(m_height), 0.0, static_cast<double>(m_vertices[1].get_im()), static_cast<double>(m_vertices[0].get_im()), static_cast<double>(i))); 
+                point.set_re(map<double>(
+                    
+                    static_cast<double>(frame.m_size[0]), 
+                    0.0, 
+                    static_cast<double>(frame.m_vertices[1].get_re()), 
+                    static_cast<double>(frame.m_vertices[0].get_re()), 
+                    static_cast<double>(j))
+                    
+                );
+                
+                point.set_im(map<double>(
+                    
+                    static_cast<double>(frame.m_size[1]), 
+                    0.0, 
+                    static_cast<double>(frame.m_vertices[1].get_im()), 
+                    static_cast<double>(frame.m_vertices[0].get_im()), 
+                    static_cast<double>(i)
+                    
+                )); 
 
-                frame.m_pixel_data[position] = check_point(point, center, ref_iters);
+                frame.m_pixel_data[position] = check_point(point, m_center, m_ref_iters);
 
-            } else if (m_optim_type == NONE){
+            } else if (!m_optim_vector[2]){
 
                 complex<T> point;
 
@@ -274,6 +298,18 @@ template<typename T> void mandelbrot_set<T>::bruteforce_compute(frame_data<T> &f
 
 template<typename T> std::unique_ptr<uint8_t[]> mandelbrot_set<T>::compute_pixels() {
 
+    if(m_optim_vector[2]) {
+
+        std::vector<complex<double>> ref_iters;
+        m_center = complex<double>(0.0, 0.0);
+
+        //center_arb.set_re(static_cast<T>(frame.m_vertices[1].get_re() + frame.m_vertices[0].get_re()) / 2.0);
+        //center_arb.set_im(static_cast<T>(frame.m_vertices[1].get_im() + frame.m_vertices[0].get_im()) / 2.0);
+
+        m_ref_iters = generate_iter_vector(m_center, m_iter);
+
+    }
+
     m_frame_array = generate_frame_array();
     std::vector<std::thread> threads;
 
@@ -281,13 +317,13 @@ template<typename T> std::unique_ptr<uint8_t[]> mandelbrot_set<T>::compute_pixel
 
     for(size_t i = 0; i < m_frame_array.size(); ++i){
 
-        if(m_optim_type == NONE || m_optim_type == PERTURBATION) {
+        if(m_optim_vector[1]) {
+
+            threads.push_back(std::thread(&mandelbrot_set<T>::border_trace, this, std::ref(m_frame_array[i])));
+
+        } else {
 
             threads.push_back(std::thread(&mandelbrot_set<T>::bruteforce_compute, this, std::ref(m_frame_array[i])));  
-
-        } else if(m_optim_type == BORDER_TRACE) {
-
-            threads.push_back(std::thread(border_trace<T>, std::ref(m_frame_array[i]), m_iter));
 
         }
 
@@ -392,5 +428,99 @@ template<typename T> void mandelbrot_set<T>::update_vertices(double x_pos, doubl
 
     m_vertices[0] = center - diag_offset;
     m_vertices[1] = center + diag_offset;
+
+}
+
+
+template<typename T> void mandelbrot_set<T>::border_trace(frame_data<T> &frame) {
+
+    /* The frame is completely descriped by two opposite vertices (represented by their relative complex points). 
+    ** Here the bottom-left and upper right are chosen, encoded in a vector as follows:
+    ** {[0]: bottom-left, [1]: upper_right}
+    */
+
+    uint32_t width = frame.m_size[0];
+    uint32_t height = frame.m_size[1];
+    std::vector<complex<T>> vertices = frame.m_vertices;
+
+    std::queue<size_t> pixel_queue;
+    std::unique_ptr<uint32_t[]> computed_iters(new uint32_t[width * height]);
+
+    for (size_t i = 0; i < height; ++i) {
+            
+        for (size_t j = 0; j < width; ++j) {
+    
+            uint32_t position = j + i * width;  
+            computed_iters[position] = m_iter + 1;
+
+        }
+
+    }
+
+    //Add image edges to pixel queue
+
+    for (size_t i = 0; i < width; ++i) {
+
+        pixel_queue.push(i);
+        pixel_queue.push((height - 1) * width + i);
+
+    }
+    
+    for (size_t i = 0; i < height; ++i) {
+        
+        pixel_queue.push(i * width);
+        pixel_queue.push(width - 1 + i * width);   
+
+    }
+
+    std::function<uint32_t(complex<T>)> check_point_optim;
+
+    if(m_optim_vector[2]) {
+
+        check_point_optim = [=](complex<T> in_point){
+
+            complex<double> point(
+                
+                static_cast<double>(in_point.get_re()),
+                static_cast<double>(in_point.get_im())
+                
+            );
+
+            return check_point(point, m_center, m_ref_iters);
+
+        };
+
+    } else {
+
+        check_point_optim = [=](complex<T> point){
+            
+            return check_point(point, m_iter);
+
+        };
+
+    }
+
+    while (!pixel_queue.empty()) {
+        
+        //TODO change input params with frame_data, cleaner solution
+
+        check_neighbours<T>(
+            
+            pixel_queue.front(), 
+            width, 
+            height, 
+            m_iter, 
+            vertices, 
+            std::ref(pixel_queue), 
+            std::ref(computed_iters), 
+            check_point_optim
+            
+        );
+        pixel_queue.pop();
+
+    }
+
+    color_all(width, height, m_iter, std::ref(computed_iters));
+    frame.m_pixel_data = std::move(computed_iters);
 
 }
