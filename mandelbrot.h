@@ -2,7 +2,7 @@
  * @ Author: Giorgio Chiurato
  * @ Create Time: 2022-03-17 15:02:29
  * @ Modified by: Giorgio Chiurato
- * @ Modified time: 2022-03-18 21:15:28
+ * @ Modified time: 2022-03-26 20:45:56
  * @ Description:
  */
 
@@ -75,6 +75,7 @@ template<typename T> class mandelbrot_set {
         uint32_t m_height;
         double m_x_pos;
         double m_y_pos;
+        bool m_first_frame = true;
         uint32_t m_iter;
         color_mode m_color_mode;
         optimization_type m_optim_type;
@@ -84,7 +85,7 @@ template<typename T> class mandelbrot_set {
         std::vector<frame_data<T>> m_frame_array;
         std::unique_ptr<uint32_t[]> m_points;
         std::vector<complex<T>> m_vertices;
-        complex<T> m_center;
+        complex<T> m_center = complex<T>(0.0, 0.0);
         std::vector<complex<double>> m_ref_iters;
 
         void bruteforce_compute(frame_data<T> &frame);
@@ -100,18 +101,39 @@ template<typename T> class mandelbrot_set {
 
 template<typename T> void mandelbrot_set<T>::find_center() {
 
+    if(m_first_frame) {
+        
+        m_first_frame != m_first_frame;
+        return;
+
+    }
+    
+
+    std::vector<uint32_t> max_iter_point;
+
+    if (m_points[m_x_pos + m_y_pos * m_width] == m_iter) {
+
+        m_center.set_re(static_cast<T>(m_vertices[1].get_re() + m_vertices[0].get_re()) / 2.0);
+        m_center.set_im(static_cast<T>(m_vertices[1].get_im() + m_vertices[0].get_im()) / 2.0);
+
+    }
+
+    max_iter_point.push_back(m_x_pos);
+    max_iter_point.push_back(m_y_pos);
+    max_iter_point.push_back(m_points[m_x_pos + m_y_pos * m_width]);
+
     //TODO adjust externally zoom factor
 
-    std::list<uint32_t> j_values;
-    std::list<uint32_t> i_values;
+    std::vector<uint32_t> j_values;
+    std::vector<uint32_t> i_values;
 
     uint32_t x_offset = (m_width / 10) / 2;
     uint32_t y_offset = (m_height / 10) / 2;
 
     uint32_t j_min = ((m_x_pos - x_offset) > 0 ? m_x_pos - x_offset : 0);
-    uint32_t i_min = ((m_height - m_y_pos - y_offset) > 0 ? m_height - m_y_pos - y_offset : 0);
+    uint32_t i_min = ((m_y_pos - y_offset) > 0 ? m_y_pos - y_offset : 0);
     uint32_t j_max = ((m_x_pos + x_offset) < m_width ? m_x_pos + x_offset : m_width);
-    uint32_t i_max = ((m_height - m_y_pos + y_offset) < m_height ? m_height - m_y_pos + y_offset : m_height);
+    uint32_t i_max = ((m_y_pos + y_offset) < m_height ? m_y_pos + y_offset : m_height);
 
     for (size_t i = i_min; i < i_max; ++i) {
         
@@ -124,6 +146,34 @@ template<typename T> void mandelbrot_set<T>::find_center() {
         j_values.push_back(j);
 
     }
+
+    std::random_shuffle(j_values.begin(), j_values.end());
+    std::random_shuffle(i_values.begin(), i_values.end());
+
+    for (size_t k = 0; k < j_values.size(); ++k) {
+        
+        uint32_t position = j_values[k] + i_values[k] * m_width;
+
+        if(m_points[position] == m_iter) {
+
+            m_center.set_re(map<T>(static_cast<T>(m_width), 0.0, m_vertices[1].get_re(), m_vertices[0].get_re(), static_cast<T>(j_values[k])));
+            m_center.set_im(map<T>(static_cast<T>(m_height), 0.0, m_vertices[1].get_im(), m_vertices[0].get_im(), static_cast<T>(i_values[k])));
+            
+            return;
+
+        } else if(m_points[position] > max_iter_point[2]) {
+
+            max_iter_point[0] = j_values[k];
+            max_iter_point[1] = i_values[k];
+            max_iter_point[2] = m_points[position];
+
+        }
+        
+
+    }
+
+    m_center.set_re(map<T>(static_cast<T>(m_width), 0.0, m_vertices[1].get_re(), m_vertices[0].get_re(), static_cast<T>(max_iter_point[0])));
+    m_center.set_im(map<T>(static_cast<T>(m_height), 0.0, m_vertices[1].get_im(), m_vertices[0].get_im(), static_cast<T>(max_iter_point[1])));
 
 }
 
@@ -308,11 +358,9 @@ template<typename T> std::unique_ptr<uint8_t[]> mandelbrot_set<T>::compute_pixel
 
     if(m_optim_vector[2]) {
 
+        find_center();
+
         std::vector<complex<double>> ref_iters;
-
-        m_center.set_re(static_cast<T>(m_vertices[1].get_re() + m_vertices[0].get_re()) / 2.0);
-        m_center.set_im(static_cast<T>(m_vertices[1].get_im() + m_vertices[0].get_im()) / 2.0);
-
         m_ref_iters = generate_iter_vector(m_center, m_iter);
 
     }
@@ -418,7 +466,7 @@ template<typename T> std::unique_ptr<uint8_t[]> mandelbrot_set<T>::compute_pixel
 template<typename T> void mandelbrot_set<T>::update_vertices(double x_pos, double y_pos) {
 
     m_x_pos = x_pos;
-    m_y_pos = y_pos;
+    m_y_pos = m_height - y_pos;
 
     T width = m_vertices[1].get_re() - m_vertices[0].get_re();
     T height = m_vertices[1].get_im() - m_vertices[0].get_im();
