@@ -82,7 +82,8 @@ template<typename T> class mandelbrot_set {
         std::vector<frame_data<T>> m_frame_array;
         std::unique_ptr<uint32_t[]> m_points;
         std::vector<complex<T>> m_vertices;
-        complex<double> m_center;
+        complex<T> m_center;
+        complex<double> m_center_double;
         std::vector<complex<double>> m_ref_iters;
 
         void bruteforce_compute(frame_data<T> &frame);
@@ -233,57 +234,33 @@ template<typename T> void mandelbrot_set<T>::bruteforce_compute(frame_data<T> &f
         for (size_t j = 0; j < frame.m_size[0]; ++j) {
 
             uint32_t position = j + i * frame.m_size[0];
-            
-            //TODO clean this up (see check_neigbhours)
+
+            complex<T> point;
+
+            point.set_re(map<T>(
+                
+                static_cast<T>(frame.m_size[0]), 
+                0.0, 
+                frame.m_vertices[1].get_re(), 
+                frame.m_vertices[0].get_re(), 
+                static_cast<T>(j)
+                
+            ));
+            point.set_im(map<T>(
+                
+                static_cast<T>(frame.m_size[1]),
+                0.0, 
+                frame.m_vertices[1].get_im(), 
+                frame.m_vertices[0].get_im(), 
+                static_cast<T>(i)
+                
+            )); 
 
             if(m_optim_vector[2]) {
-                
-                complex<double> point;
-
-                point.set_re(map<double>(
-                    
-                    static_cast<double>(frame.m_size[0]), 
-                    0.0, 
-                    static_cast<double>(frame.m_vertices[1].get_re()), 
-                    static_cast<double>(frame.m_vertices[0].get_re()), 
-                    static_cast<double>(j))
-                    
-                );
-                
-                point.set_im(map<double>(
-                    
-                    static_cast<double>(frame.m_size[1]), 
-                    0.0, 
-                    static_cast<double>(frame.m_vertices[1].get_im()), 
-                    static_cast<double>(frame.m_vertices[0].get_im()), 
-                    static_cast<double>(i)
-                    
-                )); 
 
                 frame.m_pixel_data[position] = check_point(point, m_center, m_ref_iters);
 
             } else if (!m_optim_vector[2]){
-
-                complex<T> point;
-
-                point.set_re(map<T>(
-                    
-                    static_cast<T>(frame.m_size[0]), 
-                    0.0, 
-                    frame.m_vertices[1].get_re(), 
-                    frame.m_vertices[0].get_re(), 
-                    static_cast<T>(j)
-                    
-                ));
-                point.set_im(map<T>(
-                    
-                    static_cast<T>(frame.m_size[1]),
-                    0.0, 
-                    frame.m_vertices[1].get_im(), 
-                    frame.m_vertices[0].get_im(), 
-                    static_cast<T>(i)
-                    
-                )); 
 
                 frame.m_pixel_data[position] = check_point<T>(point, m_iter);
 
@@ -301,10 +278,9 @@ template<typename T> std::unique_ptr<uint8_t[]> mandelbrot_set<T>::compute_pixel
     if(m_optim_vector[2]) {
 
         std::vector<complex<double>> ref_iters;
-        m_center = complex<double>(0.0, 0.0);
 
-        //center_arb.set_re(static_cast<T>(frame.m_vertices[1].get_re() + frame.m_vertices[0].get_re()) / 2.0);
-        //center_arb.set_im(static_cast<T>(frame.m_vertices[1].get_im() + frame.m_vertices[0].get_im()) / 2.0);
+        m_center.set_re(static_cast<T>(m_vertices[1].get_re() + m_vertices[0].get_re()) / 2.0);
+        m_center.set_im(static_cast<T>(m_vertices[1].get_im() + m_vertices[0].get_im()) / 2.0);
 
         m_ref_iters = generate_iter_vector(m_center, m_iter);
 
@@ -477,14 +453,7 @@ template<typename T> void mandelbrot_set<T>::border_trace(frame_data<T> &frame) 
 
     if(m_optim_vector[2]) {
 
-        check_point_optim = [=](complex<T> in_point){
-
-            complex<double> point(
-                
-                static_cast<double>(in_point.get_re()),
-                static_cast<double>(in_point.get_im())
-                
-            );
+        check_point_optim = [=](complex<T> point){
 
             return check_point(point, m_center, m_ref_iters);
 

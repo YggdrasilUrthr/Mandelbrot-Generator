@@ -79,13 +79,20 @@ template<typename T> uint32_t check_point(complex<T> point, uint32_t max_iter) {
 
 };
 
-uint32_t check_point(complex<double> point, complex<double> center, std::vector<complex<double>> ref_iters) {
+template<typename T> uint32_t check_point(complex<T> point, complex<T> center, std::vector<complex<double>> ref_iters) {
 
     uint32_t max_iter = ref_iters.size();
     
     complex<double> z(0.0, 0.0);
-    complex<double> delta_0 = point - center;
-    complex<double> delta(0.0, 0.0);
+
+    complex<T> delta_0_arb = point - center;
+    complex<double> delta_0(
+
+        static_cast<double>(delta_0_arb.get_re()),
+        static_cast<double>(delta_0_arb.get_im())
+
+    );
+    complex<double> delta = delta_0;
 
     for (size_t i = 0; i < max_iter; ++i) {
         

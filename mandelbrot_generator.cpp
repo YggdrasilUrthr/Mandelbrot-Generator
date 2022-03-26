@@ -97,11 +97,11 @@ int main(int argc, char ** argv){
         
     );
 
-    mandelbrot_set<boost::multiprecision::mpfr_float> arb_mandelbrot = mandelbrot_set<boost::multiprecision::mpfr_float>(
+    mandelbrot_set<boost::multiprecision::mpf_float_100> arb_mandelbrot = mandelbrot_set<boost::multiprecision::mpf_float_100>(
         
         params[0], params[1], params[2], 
-        mandelbrot_set<boost::multiprecision::mpfr_float>::color_mode(params[3]), 
-        mandelbrot_set<boost::multiprecision::mpfr_float>::optimization_type(params[4]),
+        mandelbrot_set<boost::multiprecision::mpf_float_100>::color_mode(params[3]), 
+        mandelbrot_set<boost::multiprecision::mpf_float_100>::optimization_type(params[4]),
         params[6]
         
     );
