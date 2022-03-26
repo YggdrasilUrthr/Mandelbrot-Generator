@@ -2,7 +2,7 @@
  * @ Author: Giorgio Chiurato
  * @ Create Time: 2022-03-17 15:02:29
  * @ Modified by: Giorgio Chiurato
- * @ Modified time: 2022-03-26 20:45:56
+ * @ Modified time: 2022-03-26 23:43:55
  * @ Description:
  */
 
@@ -103,7 +103,7 @@ template<typename T> void mandelbrot_set<T>::find_center() {
 
     if(m_first_frame) {
         
-        m_first_frame != m_first_frame;
+        m_first_frame = !m_first_frame;
         return;
 
     }
@@ -116,6 +116,8 @@ template<typename T> void mandelbrot_set<T>::find_center() {
         m_center.set_re(static_cast<T>(m_vertices[1].get_re() + m_vertices[0].get_re()) / 2.0);
         m_center.set_im(static_cast<T>(m_vertices[1].get_im() + m_vertices[0].get_im()) / 2.0);
 
+        return;
+
     }
 
     max_iter_point.push_back(m_x_pos);
@@ -127,8 +129,8 @@ template<typename T> void mandelbrot_set<T>::find_center() {
     std::vector<uint32_t> j_values;
     std::vector<uint32_t> i_values;
 
-    uint32_t x_offset = (m_width / 10) / 2;
-    uint32_t y_offset = (m_height / 10) / 2;
+    uint32_t x_offset = (m_width / 10);
+    uint32_t y_offset = (m_height / 10);
 
     uint32_t j_min = ((m_x_pos - x_offset) > 0 ? m_x_pos - x_offset : 0);
     uint32_t i_min = ((m_y_pos - y_offset) > 0 ? m_y_pos - y_offset : 0);
@@ -358,8 +360,6 @@ template<typename T> std::unique_ptr<uint8_t[]> mandelbrot_set<T>::compute_pixel
 
     if(m_optim_vector[2]) {
 
-        find_center();
-
         std::vector<complex<double>> ref_iters;
         m_ref_iters = generate_iter_vector(m_center, m_iter);
 
@@ -466,7 +466,14 @@ template<typename T> std::unique_ptr<uint8_t[]> mandelbrot_set<T>::compute_pixel
 template<typename T> void mandelbrot_set<T>::update_vertices(double x_pos, double y_pos) {
 
     m_x_pos = x_pos;
-    m_y_pos = m_height - y_pos;
+    m_y_pos = y_pos;
+
+    if(m_optim_vector[2]) {
+    
+        find_center();
+
+    }
+    
 
     T width = m_vertices[1].get_re() - m_vertices[0].get_re();
     T height = m_vertices[1].get_im() - m_vertices[0].get_im();
