@@ -2,7 +2,7 @@
  * @ Author: Giorgio Chiurato
  * @ Create Time: 2022-03-17 15:02:29
  * @ Modified by: Giorgio Chiurato
- * @ Modified time: 2022-03-26 23:43:55
+ * @ Modified time: 2022-03-27 00:00:15
  * @ Description:
  */
 
@@ -124,59 +124,34 @@ template<typename T> void mandelbrot_set<T>::find_center() {
     max_iter_point.push_back(m_y_pos);
     max_iter_point.push_back(m_points[m_x_pos + m_y_pos * m_width]);
 
-    //TODO adjust externally zoom factor
+    for (size_t i = 0; i < m_height; ++i) {
 
-    std::vector<uint32_t> j_values;
-    std::vector<uint32_t> i_values;
+        for (size_t j = 0; j < m_width; ++j) {
+         
+            uint32_t position = j + i * m_width;
 
-    uint32_t x_offset = (m_width / 10);
-    uint32_t y_offset = (m_height / 10);
+            if (m_points[position] == m_iter) {
 
-    uint32_t j_min = ((m_x_pos - x_offset) > 0 ? m_x_pos - x_offset : 0);
-    uint32_t i_min = ((m_y_pos - y_offset) > 0 ? m_y_pos - y_offset : 0);
-    uint32_t j_max = ((m_x_pos + x_offset) < m_width ? m_x_pos + x_offset : m_width);
-    uint32_t i_max = ((m_y_pos + y_offset) < m_height ? m_y_pos + y_offset : m_height);
+                m_center.set_re(map<T>(static_cast<T>(m_width), 0.0, m_vertices[1].get_re(), m_vertices[0].get_re(), static_cast<T>(j)));
+                m_center.set_im(map<T>(static_cast<T>(m_height), 0.0, m_vertices[1].get_im(), m_vertices[0].get_im(), static_cast<T>(i)));
 
-    for (size_t i = i_min; i < i_max; ++i) {
-        
-        i_values.push_back(i);
+                return;
 
-    }
+            } else if(m_points[position] > max_iter_point[2]) {
 
-    for (size_t j = j_min; j < j_max; ++j) {
+                max_iter_point[0] = j;
+                max_iter_point[1] = i;
+                max_iter_point[2] = m_points[position];
 
-        j_values.push_back(j);
-
-    }
-
-    std::random_shuffle(j_values.begin(), j_values.end());
-    std::random_shuffle(i_values.begin(), i_values.end());
-
-    for (size_t k = 0; k < j_values.size(); ++k) {
-        
-        uint32_t position = j_values[k] + i_values[k] * m_width;
-
-        if(m_points[position] == m_iter) {
-
-            m_center.set_re(map<T>(static_cast<T>(m_width), 0.0, m_vertices[1].get_re(), m_vertices[0].get_re(), static_cast<T>(j_values[k])));
-            m_center.set_im(map<T>(static_cast<T>(m_height), 0.0, m_vertices[1].get_im(), m_vertices[0].get_im(), static_cast<T>(i_values[k])));
-            
-            return;
-
-        } else if(m_points[position] > max_iter_point[2]) {
-
-            max_iter_point[0] = j_values[k];
-            max_iter_point[1] = i_values[k];
-            max_iter_point[2] = m_points[position];
+            }
 
         }
-        
-
+    
     }
 
     m_center.set_re(map<T>(static_cast<T>(m_width), 0.0, m_vertices[1].get_re(), m_vertices[0].get_re(), static_cast<T>(max_iter_point[0])));
     m_center.set_im(map<T>(static_cast<T>(m_height), 0.0, m_vertices[1].get_im(), m_vertices[0].get_im(), static_cast<T>(max_iter_point[1])));
-
+    
 }
 
 template<typename T> void mandelbrot_set<T>::generate_optim_array() {
