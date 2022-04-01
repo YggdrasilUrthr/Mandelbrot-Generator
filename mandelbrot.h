@@ -21,8 +21,8 @@
 
 #include "optim_algs.h"
 
-#define DEFAULT_WIDTH 800
-#define DEFAULT_HEIGHT 600
+#define DEFAULT_WIDTH 400
+#define DEFAULT_HEIGHT 400
 #define DEFAULT_ITER 100
 
 template<typename T> class mandelbrot_set {
@@ -112,6 +112,8 @@ template<typename T> void mandelbrot_set<T>::find_center() {
     std::vector<uint32_t> max_iter_point;
 
     if (m_points[m_x_pos + m_y_pos * m_width] == m_iter) {
+
+        std::cout << "ok" << std::endl;
 
         m_center.set_re(static_cast<T>(m_vertices[1].get_re() + m_vertices[0].get_re()) / 2.0);
         m_center.set_im(static_cast<T>(m_vertices[1].get_im() + m_vertices[0].get_im()) / 2.0);

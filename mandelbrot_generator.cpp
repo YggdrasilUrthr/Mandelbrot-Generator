@@ -28,25 +28,36 @@ int main(int argc, char ** argv){
     uint32_t optim_code = 0;
     bool arb_prec = false;
     bool colors = true;
+    uint32_t thread_number = 1;
 
     boost::program_options::options_description description("Program usage");
 
     description.add_options()
         ("help,h", "Displays this message")
-        ("width,W", boost::program_options::value<uint32_t>()->default_value(DEFAULT_WIDTH), "Sets image width. Default is ??px")
-        ("height,H", boost::program_options::value<uint32_t>()->default_value(DEFAULT_HEIGHT), "Sets image height. Default is equal to width")
-        ("iter,I", boost::program_options::value<uint32_t>()->default_value(DEFAULT_ITER), "Sets maximum iteration number. Default is ??")
+        ("width,W", boost::program_options::value<uint32_t>()->default_value(DEFAULT_WIDTH), "Sets image width.")
+        ("height,H", boost::program_options::value<uint32_t>()->default_value(DEFAULT_HEIGHT), "Sets image height.")
+        ("iter,I", boost::program_options::value<uint32_t>()->default_value(DEFAULT_ITER), "Sets maximum iteration number.")
         ("arb,A", "Switch to arbitrary precison numbers")
         ("bw,b", "Switch to black and white coloring")
-        ("threads,T", boost::program_options::value<uint32_t>()->default_value(1), "Enables multithreading and sets thread number")
+        ("threads,T", boost::program_options::value<uint32_t>(), "Enables multithreading and sets thread number")
         ("bt,B", "Enables border-tracing")
         ("pert,P", "Enables perturbation approximation")
-        //("full,F", boost::program_options::value<uint32_t>()->default_value(1), "Enables all optimizations an sets thread number")
+        ("full,F", boost::program_options::value<uint32_t>(), "Enables all optimizations an sets thread number")
     ;
 
     boost::program_options::variables_map var_map;
-    boost::program_options::store(boost::program_options::command_line_parser(argc, argv).options(description).run(), var_map);
-    boost::program_options::notify(var_map);
+
+    try {
+        
+        boost::program_options::store(boost::program_options::command_line_parser(argc, argv).options(description).run(), var_map);
+        boost::program_options::notify(var_map);
+    
+    } catch (std::exception& e) {
+        
+        std::cerr << "Error: " << e.what() << "\n";
+        return 1;
+  
+    }
 
     if(var_map.count("help")){
     
@@ -54,34 +65,45 @@ int main(int argc, char ** argv){
         return 0;
     
     }
-    /*if(var_map.count("full")){
+    if(var_map.count("full")){
 
-        //optim_code = 15;
+        std::cout << "WARNING: enabling all optimization will automatically set arbitrary precision on!" << std::endl;
 
-    }*/
-    if(var_map.count("bt")) {
-
-        optim_code |= mandelbrot_set<double>::optimization_type::BORDER_TRACE;
-
-    }
-    if(var_map.count("pert")){
-
-        optim_code |= mandelbrot_set<double>::optimization_type::PERTURBATION;
-
-    }
-    if(var_map.count("threads")){
-
-        optim_code |= mandelbrot_set<double>::optimization_type::MULTITHREAD;
-
-    }
-    if(var_map.count("bw")){
-
-        colors = mandelbrot_set<double>::color_mode::BOOLEAN;
-
-    }
-    if(var_map.count("arb")){
-
+        optim_code |= mandelbrot_set<double>::optimization_type::FULL;
+        thread_number =  var_map["full"].as<uint32_t>();
         arb_prec = true;
+
+    } else {
+
+        if(var_map.count("bt")) {
+
+            optim_code |= mandelbrot_set<double>::optimization_type::BORDER_TRACE;
+
+        }
+        if(var_map.count("pert")){
+
+            std::cout << "WARNING: enabling perturbation optimization will automatically set arbitrary precision on!" << std::endl;
+
+            optim_code |= mandelbrot_set<double>::optimization_type::PERTURBATION;
+            arb_prec = true;
+
+        }
+        if(var_map.count("threads")){
+
+            optim_code |= mandelbrot_set<double>::optimization_type::MULTITHREAD;
+            thread_number =  var_map["threads"].as<uint32_t>();
+
+        }
+        if(var_map.count("bw")){
+
+            colors = mandelbrot_set<double>::color_mode::BOOLEAN;
+
+        }
+        if(var_map.count("arb")){
+
+            arb_prec = true;
+
+        }
 
     }
 
@@ -90,7 +112,7 @@ int main(int argc, char ** argv){
 
     glewExperimental = true;
 
-    if( !glfwInit() ) {
+    if(!glfwInit()) {
         
         std::cerr << "Failed to initialize GLFW" << std::endl;
         
@@ -133,7 +155,7 @@ int main(int argc, char ** argv){
         width, height, var_map["iter"].as<uint32_t>(), 
         mandelbrot_set<double>::color_mode(colors), 
         mandelbrot_set<double>::optimization_type(optim_code),
-        var_map["threads"].as<uint32_t>()
+        thread_number
         
     );
 
@@ -142,7 +164,7 @@ int main(int argc, char ** argv){
         width, height, var_map["iter"].as<uint32_t>(),
         mandelbrot_set<boost::multiprecision::mpf_float_100>::color_mode(colors), 
         mandelbrot_set<boost::multiprecision::mpf_float_100>::optimization_type(optim_code),
-        var_map["threads"].as<uint32_t>()
+        thread_number
         
     );
 
