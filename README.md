@@ -6,6 +6,7 @@ In order to use this program the following libraries are needed:
 - GLEW
 - GMP and MPFR 
 - BOOST (program_options and multiprecision)
+
 If you are using Debian 11 you can simply install the following packages:
 - libopengl-dev
 - libglfw3-dev
