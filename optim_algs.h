@@ -2,7 +2,7 @@
  * @ Author: Giorgio Chiurato
  * @ Create Time: 2022-03-17 15:02:29
  * @ Modified by: Giorgio Chiurato
- * @ Modified time: 2022-03-18 20:42:07
+ * @ Modified time: 2022-04-05 16:33:24
  * @ Description: additional algorithm needed by mandelbrot.h
  */
 
@@ -14,8 +14,7 @@
 
 #pragma once
 
-/* A very basic struct describing an image frame and its properties, such as width, height and pixel data.
-*/
+// A very basic struct describing an image frame and its properties, such as width, height and pixel data.
 
 template<typename T> struct frame_data {
 
@@ -66,7 +65,7 @@ template<typename T> struct frame_data {
 
 /* The two following functions check whether a point belongs to the the set, using respectively the stanard escape algorithm
 // and the formula optained applying the pertubartion theory (hence the need to pass a precomputed reference iteration vector).
-// for a better comprehension of the two algorithm see:
+// For a better comprehension of the two algorithm see:
 // https://en.wikipedia.org/wiki/Mandelbrot_set
 // https://fractaltodesktop.com/perturbation-theory/index.html#:~:text=If%20we%20say%20that%20the,and%20Xn%20is%20the
 */
@@ -146,8 +145,7 @@ template<typename T> std::vector<complex<double>> generate_iter_vector(const com
 
 }
 
-/* This function (name inspired from the well-known function available on Arduino), maps an interval onto a different one.
-*/
+// This function (name inspired from the well-known function available on Arduino), maps an interval onto a different one.
 
 template<typename T> T map(T old_max, T old_min, T new_max, T new_min, T value) {
 
@@ -283,7 +281,7 @@ template<typename T> void check_neighbours(
 
 }
 
-/* This function colors all the uncomputed pixel, scanning the image horizontally and setting a pixel color equally to the
+/* This function colors all the uncomputed pixels, scanning the image horizontally and setting a pixel color equally to the
 // pixel on the left. The color changes automatically when hitting a lemniscate.
 */ 
 

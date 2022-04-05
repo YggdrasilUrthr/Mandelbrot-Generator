@@ -2,7 +2,7 @@
  * @ Author: Giorgio Chiurato
  * @ Create Time: 2022-03-17 15:02:29
  * @ Modified by: Giorgio Chiurato
- * @ Modified time: 2022-03-27 00:00:15
+ * @ Modified time: 2022-04-05 16:31:51
  * @ Description: mandelbrot_set class definition and implementation.
  */
 
@@ -97,7 +97,7 @@ template<typename T> class mandelbrot_set {
 
 template<typename T> void mandelbrot_set<T>::find_center() {
 
-    // If this is the first time running the loop, simply use the deafault center (0, 0)
+    // If this is the first time running the loop, simply use the default center (0, 0)
 
     if(m_first_frame) {
         
@@ -108,7 +108,7 @@ template<typename T> void mandelbrot_set<T>::find_center() {
 
     std::vector<uint32_t> max_iter_point;
 
-    // If the select center already is a point belonging to the set, use it as the center
+    // If the selected center already is a point belonging to the set, use it as the pertubation center
 
     if (m_points[m_x_pos + m_y_pos * m_width] == m_iter) {
 
@@ -119,8 +119,8 @@ template<typename T> void mandelbrot_set<T>::find_center() {
 
     }
 
-    /* Check if any point in the image within the zoom square belongs to the set and set it as the center, otherwise check
-    // all the available pixel. If no point belongs to the set return the point with the highest iteration number.
+    /* Check if any point in the image within the zoom square belongs to the set and set it as the perturbation center, otherwise check
+    // all the available pixels. If no point belongs to the set return the point with the highest iteration number.
     */
 
     max_iter_point.push_back(m_x_pos);
@@ -192,7 +192,7 @@ template<typename T> void mandelbrot_set<T>::generate_optim_array() {
 
     }
 
-    // Parse the optimization code into a bool array representing the enabled optimization.
+    // Parse the optimization code into a bool array representing the enabled optimizations.
 
     m_optim_vector[0] = (m_optim_type & 0b0001);
     m_optim_vector[1] = (m_optim_type & 0b0010) >> 1;
@@ -200,8 +200,8 @@ template<typename T> void mandelbrot_set<T>::generate_optim_array() {
 
 }
 
-/* This function take multiple pixel arrays coming from different frame (computed in parallel with multithreadind) and joins them
-// into a single array representing the while picture. This is simply done by copying each pixel as needed.
+/* This function take multiple pixel arrays coming from different frames (computed in parallel with multithreading) and joins them
+// into a single array representing the whole picture. This is simply done by copying each pixel accordingly.
 */
 
 template<typename T> std::unique_ptr<uint32_t[]> mandelbrot_set<T>::join_pixel_arrays(std::vector<frame_data<T>> &frame_array) {
@@ -254,7 +254,7 @@ template<typename T> std::vector<uint8_t> mandelbrot_set<T>::generate_color(uint
 
 }
 
-// This function returns the correct factor used to subdivide the image in equal frames. See the next function for a better description.
+// This function returns the correct factor used to subdivide the image in equal frames. See the following function for a better description.
 
 template<typename T> uint32_t mandelbrot_set<T>::thread_subdivide(uint32_t value) {
 
@@ -283,7 +283,7 @@ template<typename T> std::vector<frame_data<T>> mandelbrot_set<T>::generate_fram
 
     std::vector<frame_data<T>> frame_array;
 
-    /* Construct the different frames an their parameters. Basically each frame is a lower resultion portion of the 
+    /* Construct the different frames and assign their parameters. Basically each frame is a lower resultion portion of the 
     // complete image. After each frame has been computed, they will be joined back together.
     */
 
@@ -470,7 +470,7 @@ template<typename T> std::unique_ptr<uint8_t[]> mandelbrot_set<T>::compute_pixel
     
     } else {
 
-        // If a black and white picture has been requested, set alla the points in the set to white and all the points outside the set to black.
+        // If a black and white picture has been requested, set all the points in the set to white and all the points outside the set to black.
 
         for (size_t i = 0; i < m_height; ++i) {
             

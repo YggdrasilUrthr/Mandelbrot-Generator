@@ -2,7 +2,7 @@
  * @ Author: Giorgio Chiurato
  * @ Create Time: 2022-03-17 15:02:29
  * @ Modified by: Giorgio Chiurato
- * @ Modified time: 2022-03-31 19:21:20
+ * @ Modified time: 2022-04-05 16:27:53
  * @ Description: main program and window handler.
  */
 
@@ -131,7 +131,19 @@ int main(int argc, char ** argv){
 
     }
 
-    /* Get the dimension of primary monitor and check whether the requested dimension are appliable, otherwise
+    // Initialize glfw and create a new window
+
+    glewExperimental = true;
+
+    if(!glfwInit()) {
+        
+        std::cerr << "Failed to initialize GLFW" << std::endl;
+        
+        return -1;
+    
+    }
+
+    /* Get the dimensions of primary monitor and check whether the requested dimensions are appliable, otherwise
     // use all the available space.
     */
 
@@ -145,8 +157,16 @@ int main(int argc, char ** argv){
         int monitor_xpos, monitor_ypos, monitor_width, monitor_height;
         glfwGetMonitorWorkarea(primary_monitor, &monitor_xpos, &monitor_ypos, &monitor_width, &monitor_height);
 
-        width = width < monitor_width ? width : monitor_width;
-        height = height < monitor_height ? height : monitor_height;
+        if(width > monitor_width || height > monitor_height) {
+
+            std::cout << "WARNING: request image dimensions are higher than monitor dimensions. The image size "
+                      << "has been automatically reduced!" << std::endl;
+
+            width = monitor_height > monitor_width ? monitor_width : monitor_height;
+            height = width;
+
+        }
+        
 
     } else {
 
@@ -162,19 +182,6 @@ int main(int argc, char ** argv){
                   << "This will produce a stretched image!" << std::endl;
 
     }
-
-    // Initialize glfw and create a new window
-
-    glewExperimental = true;
-
-    if(!glfwInit()) {
-        
-        std::cerr << "Failed to initialize GLFW" << std::endl;
-        
-        return -1;
-    
-    }
-
 
     GLFWwindow * window;
     window = glfwCreateWindow(width, height, "Mandelbrot Set", NULL, NULL);
@@ -207,7 +214,7 @@ int main(int argc, char ** argv){
     glfwSetMouseButtonCallback(window, mouse_button_callback);
     glfwSetWindowUserPointer(window, click_point.data());
 
-    // Create two versions of the set, one using arbitary precision numbers and the other one using simple doubles.
+    // Create two versions of the set, one using arbitrary precision numbers and the other one using doubles.
 
     mandelbrot_set<double> fixed_mandelbrot = mandelbrot_set<double>(
         
@@ -248,7 +255,7 @@ int main(int argc, char ** argv){
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity(); 
 
-    // Calculate the two offets used when drawing the red box.
+    // Calculate the offsets used when drawing the red box.
 
     double x_pos;
     double y_pos;
