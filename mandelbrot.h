@@ -3,7 +3,7 @@
  * @ Create Time: 2022-03-17 15:02:29
  * @ Modified by: Giorgio Chiurato
  * @ Modified time: 2022-03-27 00:00:15
- * @ Description:
+ * @ Description: mandelbrot_set class definition and implementation.
  */
 
 #pragma once
@@ -13,17 +13,12 @@
 #include <chrono>
 #include <thread>
 
-#include <GL/glew.h>
-#include <GL/gl.h>
-#include <GLFW/glfw3.h>
-
-#include <boost/math/interpolators/barycentric_rational.hpp>
-
 #include "optim_algs.h"
 
 #define DEFAULT_WIDTH 400
 #define DEFAULT_HEIGHT 400
 #define DEFAULT_ITER 100
+#define ZOOM_FACTOR 10
 
 template<typename T> class mandelbrot_set {
 
@@ -81,7 +76,7 @@ template<typename T> class mandelbrot_set {
         optimization_type m_optim_type;
         std::vector<bool> m_optim_vector = {0, 0, 0};
         uint8_t m_thread_number;
-        uint32_t m_zoom_factor = 10;
+        uint32_t m_zoom_factor = ZOOM_FACTOR;
 
         std::vector<frame_data<T>> m_frame_array;
         std::unique_ptr<uint32_t[]> m_points;
@@ -197,11 +192,17 @@ template<typename T> void mandelbrot_set<T>::generate_optim_array() {
 
     }
 
+    // Parse the optimization code into a bool array representing the enabled optimization.
+
     m_optim_vector[0] = (m_optim_type & 0b0001);
     m_optim_vector[1] = (m_optim_type & 0b0010) >> 1;
     m_optim_vector[2] = (m_optim_type & 0b0100) >> 2;
 
 }
+
+/* This function take multiple pixel arrays coming from different frame (computed in parallel with multithreadind) and joins them
+// into a single array representing the while picture. This is simply done by copying each pixel as needed.
+*/
 
 template<typename T> std::unique_ptr<uint32_t[]> mandelbrot_set<T>::join_pixel_arrays(std::vector<frame_data<T>> &frame_array) {
 
@@ -229,6 +230,10 @@ template<typename T> std::unique_ptr<uint32_t[]> mandelbrot_set<T>::join_pixel_a
 
 }
 
+/* This function associates a color to an iteration number. The coloring algorithm is based on Bernstein polynomials and normalized
+// iteration count. This gives the smoothest possible color transition without the addition of more elaborate overhead.
+*/
+
 template<typename T> std::vector<uint8_t> mandelbrot_set<T>::generate_color(uint32_t iter) {
 
     float t = static_cast<float>(iter) / static_cast<float>(m_iter);
@@ -248,6 +253,8 @@ template<typename T> std::vector<uint8_t> mandelbrot_set<T>::generate_color(uint
     return RGB;
 
 }
+
+// This function returns the correct factor used to subdivide the image in equal frames. See the next function for a better description.
 
 template<typename T> uint32_t mandelbrot_set<T>::thread_subdivide(uint32_t value) {
 
@@ -269,11 +276,16 @@ template<typename T> uint32_t mandelbrot_set<T>::thread_subdivide(uint32_t value
 
 template<typename T> std::vector<frame_data<T>> mandelbrot_set<T>::generate_frame_array() {
 
+    // Get horizontal and vertical frame number
+
     uint32_t vert_frames = thread_subdivide(m_thread_number);
     uint32_t hor_frames = thread_subdivide(m_thread_number / vert_frames);
-    
 
     std::vector<frame_data<T>> frame_array;
+
+    /* Construct the different frames an their parameters. Basically each frame is a lower resultion portion of the 
+    // complete image. After each frame has been computed, they will be joined back together.
+    */
 
     for(uint32_t i = 0; i < vert_frames; ++i) {
 
@@ -319,6 +331,8 @@ template<typename T> std::vector<frame_data<T>> mandelbrot_set<T>::generate_fram
     return frame_array;
 
 }
+
+// This is the standard mandelbrot set algorithm: iterate over each pixel until it escapes.
 
 template<typename T> void mandelbrot_set<T>::bruteforce_compute(frame_data<T> &frame) {
 
@@ -366,7 +380,11 @@ template<typename T> void mandelbrot_set<T>::bruteforce_compute(frame_data<T> &f
         
 }
 
+// This function generates the final pixel array used in the image.
+
 template<typename T> std::unique_ptr<uint8_t[]> mandelbrot_set<T>::compute_pixels() {
+
+    // Generate the reference array if perturbation theory has been requested.
 
     if(m_optim_vector[2]) {
 
@@ -379,6 +397,8 @@ template<typename T> std::unique_ptr<uint8_t[]> mandelbrot_set<T>::compute_pixel
     std::vector<std::thread> threads;
 
     std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+
+    // Separate each frame and compute it independently
 
     for(size_t i = 0; i < m_frame_array.size(); ++i){
 
@@ -394,16 +414,26 @@ template<typename T> std::unique_ptr<uint8_t[]> mandelbrot_set<T>::compute_pixel
 
     }
 
+    // Wait for all the threads to finish
+
     for(auto &thread : threads) {
 
         thread.join();
 
     }
 
+    // Join the data from all the different frames.
+
     m_points = std::move(join_pixel_arrays(m_frame_array));
     
+    // Log the elapsed time since the start of the computation.
+
     std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
     std::cout << std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() << "[µs]" << std::endl;
+
+    /* Generate the complete array and set the pixel color. Note that the final array is three times longer than the iteration array,
+    // since a color is described by three numbers (R, G and B component).
+    */ 
 
     std::unique_ptr<uint8_t[]> pixels(new uint8_t[m_width * m_height * 3]);
 
@@ -440,6 +470,8 @@ template<typename T> std::unique_ptr<uint8_t[]> mandelbrot_set<T>::compute_pixel
     
     } else {
 
+        // If a black and white picture has been requested, set alla the points in the set to white and all the points outside the set to black.
+
         for (size_t i = 0; i < m_height; ++i) {
             
             for (size_t j = 0; j < m_width; ++j) {
@@ -447,7 +479,7 @@ template<typename T> std::unique_ptr<uint8_t[]> mandelbrot_set<T>::compute_pixel
                 uint32_t position = j + i * m_width;
                 uint8_t luminance;
 
-                if (m_points[position] == 0){
+                if (m_points[position] == m_iter){
                     
                     luminance = 255;
 
@@ -475,6 +507,8 @@ template<typename T> std::unique_ptr<uint8_t[]> mandelbrot_set<T>::compute_pixel
 
 template<typename T> void mandelbrot_set<T>::update_vertices(double x_pos, double y_pos) {
 
+    // Updates the center x and y coordinates as well as the center used for perturbation theory.
+
     m_x_pos = x_pos;
     m_y_pos = y_pos;
 
@@ -488,14 +522,14 @@ template<typename T> void mandelbrot_set<T>::update_vertices(double x_pos, doubl
     T width = m_vertices[1].get_re() - m_vertices[0].get_re();
     T height = m_vertices[1].get_im() - m_vertices[0].get_im();
 
+    // Get the pixel at the center of the image, calculating the frame vertices by offsetting its coordinates.
+
     complex<T> center(
 
         map<T>(static_cast<T>(m_width), 0.0, m_vertices[1].get_re(), m_vertices[0].get_re(), x_pos),
         map<T>(static_cast<T>(m_height), 0.0, m_vertices[1].get_im(), m_vertices[0].get_im(), y_pos)
 
     );
-
-    // TODO adjust zoom factor esternally, now hard-coded to 10
 
     complex<T> diag_offset(width / m_zoom_factor, height / m_zoom_factor);
 
@@ -546,6 +580,8 @@ template<typename T> void mandelbrot_set<T>::border_trace(frame_data<T> &frame) 
 
     }
 
+    // Change the check_point function if perturbation theory has been requested.
+
     std::function<uint32_t(complex<T>)> check_point_optim;
 
     if(m_optim_vector[2]) {
@@ -566,9 +602,9 @@ template<typename T> void mandelbrot_set<T>::border_trace(frame_data<T> &frame) 
 
     }
 
+    // Check all the pixel in queue until all borders has been found (pixel_queue empty)
+
     while (!pixel_queue.empty()) {
-        
-        //TODO change input params with frame_data, cleaner solution
 
         check_neighbours<T>(
             
@@ -585,6 +621,8 @@ template<typename T> void mandelbrot_set<T>::border_trace(frame_data<T> &frame) 
         pixel_queue.pop();
 
     }
+
+    // Color all ther remaining pixels and return the complete pixel array.
 
     color_all(width, height, m_iter, std::ref(computed_iters));
     frame.m_pixel_data = std::move(computed_iters);

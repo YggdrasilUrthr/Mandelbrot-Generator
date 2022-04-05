@@ -3,7 +3,7 @@
  * @ Create Time: 2022-03-17 15:02:29
  * @ Modified by: Giorgio Chiurato
  * @ Modified time: 2022-03-18 20:42:07
- * @ Description:
+ * @ Description: additional algorithm needed by mandelbrot.h
  */
 
 #include <list>
@@ -13,6 +13,9 @@
 #include "complex.h"
 
 #pragma once
+
+/* A very basic struct describing an image frame and its properties, such as width, height and pixel data.
+*/
 
 template<typename T> struct frame_data {
 
@@ -49,6 +52,8 @@ template<typename T> struct frame_data {
         m_pixel_data = std::unique_ptr<uint32_t[]>(new uint32_t[m_size[0] * m_size[1]]);
 
     };
+
+    // m_idx represents the frame index when using a frame array in multithreading operation.
 
     std::vector<uint32_t> m_size;
     std::vector<complex<T>> m_vertices;
@@ -278,8 +283,8 @@ template<typename T> void check_neighbours(
 
 }
 
-/* This function colors all the uncomputed pixel, scanning the image horizontally and setting a pixel color to the one common to the
-// region bounded by the lemniscate.
+/* This function colors all the uncomputed pixel, scanning the image horizontally and setting a pixel color equally to the
+// pixel on the left. The color changes automatically when hitting a lemniscate.
 */ 
 
 void color_all(

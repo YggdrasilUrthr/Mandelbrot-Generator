@@ -37,6 +37,9 @@ Old/
 #VsCode folder
 .vscode/
 
+#LineCount folder
+out/
+
 # Local libraries
 gmp-6.2.1/
 
