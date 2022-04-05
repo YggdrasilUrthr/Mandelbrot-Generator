@@ -59,6 +59,12 @@ template<typename T> struct frame_data {
 
 };
 
+/* The two following functions check whether a point belongs to the the set, using respectively the stanard escape algorithm
+// and the formula optained applying the pertubartion theory (hence the need to pass a precomputed reference iteration vector).
+// for a better comprehension of the two algorithm see:
+// https://en.wikipedia.org/wiki/Mandelbrot_set
+// https://fractaltodesktop.com/perturbation-theory/index.html#:~:text=If%20we%20say%20that%20the,and%20Xn%20is%20the
+*/
 template<typename T> uint32_t check_point(complex<T> point, uint32_t max_iter) {
 
     complex<T> z(0.0, 0.0);
@@ -112,6 +118,10 @@ template<typename T> uint32_t check_point(complex<T> point, complex<T> center, s
 
 }
 
+/* The following function apply the escape algorithm to the center points and saves each iteration step to a vector, which will
+// later be used as a reference point for the computations based on perturbation theory.
+*/
+
 template<typename T> std::vector<complex<double>> generate_iter_vector(const complex<T> center, uint32_t max_iter) {
 
     std::vector<complex<double>> iter_vector;
@@ -131,11 +141,18 @@ template<typename T> std::vector<complex<double>> generate_iter_vector(const com
 
 }
 
+/* This function (name inspired from the well-known function available on Arduino), maps an interval onto a different one.
+*/
+
 template<typename T> T map(T old_max, T old_min, T new_max, T new_min, T value) {
 
     return (value - old_min) * (new_max - new_min) / (old_max - old_min) + new_min;
 
 }
+
+/* This fucntion computes the complex number at the center of a given pixel (represented by its index in a pixel array), knowing the
+// image dimensions and the corresponding vertices on the complex plane.
+*/
 
 template<typename T> complex<T> get_point_from_index(std::vector<complex<T>> vertices, size_t idx, uint32_t width, uint32_t height) {
 
@@ -149,6 +166,9 @@ template<typename T> complex<T> get_point_from_index(std::vector<complex<T>> ver
     return point;
 
 }
+
+/* This function checks if any pixel surrounding a center has a different iteration number, thus identifyng a lemniscate. 
+*/
 
 template<typename T> void check_neighbours(
     
@@ -257,6 +277,10 @@ template<typename T> void check_neighbours(
     }
 
 }
+
+/* This function colors all the uncomputed pixel, scanning the image horizontally and setting a pixel color to the one common to the
+// region bounded by the lemniscate.
+*/ 
 
 void color_all(
     

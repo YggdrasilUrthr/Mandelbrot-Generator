@@ -12,10 +12,10 @@
 #include <boost/multiprecision/gmp.hpp>
 #include <boost/multiprecision/mpfr.hpp>
 
-/* This is a very minimalistic implementation (it does not support any argument variable and it can only be used for floating point
-** real and imaginary part) of complex numbers using some basic GMP functions. 
-** A better alternative may include a specific library for arbitrary precision complex numbers (something like GMC). 
-** Anyway, considering what we need for such a simple mathematical application, using such complete library might result somehow overkill. 
+/* This is a very minimalistic implementation (it does not deal with complex number arguments) of complex numbers and their related 
+** arithmetic operations. A better alternative may include a specific library for arbitrary precision complex numbers (something like GMC). 
+** Anyway, considering what we need for such a simple mathematical application, using one of these libraries might result somehow overkill. 
+** There won't be any additional comments on the code, since it pretty much explains itself.
 */
 
 template<typename T> class complex {
@@ -34,7 +34,6 @@ public:
     
     const T get_mod() { 
         
-        //update_mods();
         return m_mod; 
         
     };
@@ -112,26 +111,9 @@ private:
 
     };
 
-    bool epsilon_compare(T in_1, T in_2) {
-
-        double epsilon = std::numeric_limits<double>::epsilon();
-
-        if(abs(in_1 - in_2) < 0.0001) {
-
-            return true;
-
-        }
-
-        return false;
-
-    };
-
     T m_re = 0;
     T m_im = 0;
     T m_mod = 0;
     T m_mod_sqrd = 0;
 
 };
-
-typedef complex<boost::multiprecision::mpfr_float> complex_arb;
-typedef complex<double> complex_fix;

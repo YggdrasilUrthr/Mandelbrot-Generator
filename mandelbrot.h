@@ -81,6 +81,7 @@ template<typename T> class mandelbrot_set {
         optimization_type m_optim_type;
         std::vector<bool> m_optim_vector = {0, 0, 0};
         uint8_t m_thread_number;
+        uint32_t m_zoom_factor = 10;
 
         std::vector<frame_data<T>> m_frame_array;
         std::unique_ptr<uint32_t[]> m_points;
@@ -101,30 +102,62 @@ template<typename T> class mandelbrot_set {
 
 template<typename T> void mandelbrot_set<T>::find_center() {
 
+    // If this is the first time running the loop, simply use the deafault center (0, 0)
+
     if(m_first_frame) {
         
         m_first_frame = !m_first_frame;
         return;
 
-    }
-    
+    }    
 
     std::vector<uint32_t> max_iter_point;
 
+    // If the select center already is a point belonging to the set, use it as the center
+
     if (m_points[m_x_pos + m_y_pos * m_width] == m_iter) {
 
-        std::cout << "ok" << std::endl;
-
-        m_center.set_re(static_cast<T>(m_vertices[1].get_re() + m_vertices[0].get_re()) / 2.0);
-        m_center.set_im(static_cast<T>(m_vertices[1].get_im() + m_vertices[0].get_im()) / 2.0);
+        m_center.set_re(map<T>(static_cast<T>(m_width), 0.0, m_vertices[1].get_re(), m_vertices[0].get_re(), static_cast<T>(m_x_pos)));
+        m_center.set_im(map<T>(static_cast<T>(m_height), 0.0, m_vertices[1].get_im(), m_vertices[0].get_im(), static_cast<T>(m_y_pos)));
 
         return;
 
     }
 
+    /* Check if any point in the image within the zoom square belongs to the set and set it as the center, otherwise check
+    // all the available pixel. If no point belongs to the set return the point with the highest iteration number.
+    */
+
     max_iter_point.push_back(m_x_pos);
     max_iter_point.push_back(m_y_pos);
     max_iter_point.push_back(m_points[m_x_pos + m_y_pos * m_width]);
+
+    // Zoom Square
+
+    uint32_t y_offset = m_height / m_zoom_factor;
+    uint32_t x_offset = m_width / m_zoom_factor;
+
+    for (size_t i = m_y_pos - y_offset; i < m_y_pos + y_offset; ++i) {
+
+        for (size_t j = m_x_pos - x_offset; j < m_x_pos + x_offset; ++j) {
+        
+            uint32_t position = j + i * m_width;
+
+            if (m_points[position] == m_iter) {
+
+                m_center.set_re(map<T>(static_cast<T>(m_width), 0.0, m_vertices[1].get_re(), m_vertices[0].get_re(), static_cast<T>(j)));
+                m_center.set_im(map<T>(static_cast<T>(m_height), 0.0, m_vertices[1].get_im(), m_vertices[0].get_im(), static_cast<T>(i)));
+
+                return;
+
+            }        
+        
+        }
+
+    }
+    
+
+    // Full image or maximum iteration
 
     for (size_t i = 0; i < m_height; ++i) {
 
@@ -153,7 +186,7 @@ template<typename T> void mandelbrot_set<T>::find_center() {
 
     m_center.set_re(map<T>(static_cast<T>(m_width), 0.0, m_vertices[1].get_re(), m_vertices[0].get_re(), static_cast<T>(max_iter_point[0])));
     m_center.set_im(map<T>(static_cast<T>(m_height), 0.0, m_vertices[1].get_im(), m_vertices[0].get_im(), static_cast<T>(max_iter_point[1])));
-    
+
 }
 
 template<typename T> void mandelbrot_set<T>::generate_optim_array() {
@@ -464,7 +497,7 @@ template<typename T> void mandelbrot_set<T>::update_vertices(double x_pos, doubl
 
     // TODO adjust zoom factor esternally, now hard-coded to 10
 
-    complex<T> diag_offset(width / 10, height / 10);
+    complex<T> diag_offset(width / m_zoom_factor, height / m_zoom_factor);
 
     m_vertices[0] = center - diag_offset;
     m_vertices[1] = center + diag_offset;
