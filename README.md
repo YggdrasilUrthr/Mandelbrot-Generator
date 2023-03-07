@@ -1,4 +1,7 @@
 # Mandelbrot-Generator
+
+The program is capable of generating a mandelbrot set exploiting different optimization techniques (such as contour tracing and perturbation theory), using both fixed and abitrary precision numbers. It still lacks some functionalities, that may be implemented in the future, but the overall correct behaviour has been tested.
+
 ## Requirements
 In order to use this program the following libraries are needed:
 - OpenGl
